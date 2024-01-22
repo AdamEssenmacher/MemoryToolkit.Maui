@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:SkiaSharp.Extended.UI.Controls;assembly=SkiaSharp.Extended.UI"
+             xmlns:mem="clr-namespace:MemoryToolkit.Maui;assembly=MemoryToolkit.Maui"
+             x:Class="MemoryToolkit.Maui.Demos.MainPage.LeakyPage"
+             mem:GCMonitorBehavior.Cascade="True"
+             mem:AutoDisconnectBehavior.Cascade="True">
+            <!-- HINT!! Set AutoDisconnectBehavior.Cascade to 'False' to see how it is preventing the leak from spreading! -->
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="30,0"
+            Spacing="25">
+
+            <!-- Demo animation from MotionsTK.studio on IconScout: https://iconscout.com/free-lottie-animation/loading-5122381 -->
+            <!-- This control is known to introduce a memory leak as long as its IsAnimationEnabled property is true -->
+            <controls:SKLottieView Source="loading.json"
+                                   HeightRequest="200"
+                                   WidthRequest="200"
+                                   RepeatCount="-1" />
+
+            <Label
+                Text="This page is expected to contain a memory leak. Go back to see!"
+                Style="{StaticResource SubHeadline}" />
+
+            <Button Text="Go Back"
+                    Clicked="GoBack"
+                    HorizontalOptions="Fill" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
