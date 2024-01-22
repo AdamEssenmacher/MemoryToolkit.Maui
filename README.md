@@ -31,7 +31,7 @@ Leaks happen... but they don't have to be *catastrophic*. Ideally, small leaks h
 
 Ship builders know how important it is to compartmentalize their ship designs. If a ship takes on water, it's important to keep that water contained to a single compartment. If the ship is compartmentalized, it can take on water and still stay afloat. If it's not, it will sink.
 
-MAUI's architecture makes leak compartmentalization about as effective as the _RMS Titanic_'s. MemoryToolkit.Maui works to improve the situation by de-constructing your pages and views when they're no longer needed. This deconstruction usually won't prevent a leak (though sometimes it will!), but it can at least prevent the leak from spreading like a zombie apocalypse.
+MAUI's architecture makes leak compartmentalization about as effective as the _RMS Titanic_'s. MemoryToolkit.Maui works to improve the situation by de-constructing your pages and views when they're no longer needed. This deconstruction usually won't prevent a leak (though sometimes it will!), but it can at least prevent leaks from spreading like a zombie apocalypse.
 
 ### 3) Leak Prevention (i.e. `DisconnectHandler()`)
 
