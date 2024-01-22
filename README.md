@@ -35,21 +35,21 @@ MAUI's architecture makes leak compartmentalization about as effective as the _R
 
 ### 3) Leak Prevention (i.e. `DisconnectHandler()`)
 
-For those that don't know, MAUI is an abstraction over native UI frameworks. This means that MAUI controls are not actually the UI controls you see on the screen (at least, not directly). Instead, they're just a representation of native controls, which are mapped via a `Handler`. These handlers are really important in MAUI. They're the bridge between the platform-agnostic MAUI world and the native platform world. We don't have to dig too deep into how Handlers work, but you should know that they have two very important methods: `ConnectHandler()` and `DisconnectHandler()`
+For those who don't know, MAUI is an abstraction over native UI frameworks. This means that MAUI controls are not actually the UI controls you see on the screen (at least, not directly). Instead, they're just a representation of native controls, which are mapped via a `Handler`. These handlers are really important in MAUI. They're the bridge between the platform-agnostic MAUI world and the native platform world. We don't have to dig too deep into how Handlers work, but you should know that they have two very important methods: `ConnectHandler()` and `DisconnectHandler()`
 
 These two methods pretty much do what it sounds like they might. `ConnectHandler()` is where the handler sets up the native control, wires up event subscriptions, and establishes any other resources it needs. DisconnectHandler() reverses the process, cleaning up the native control, unsubscribing from events, and disposing any other resources.
 
-`ConnectHandler()` is a protected method, so it's not something you will ever need to worry about or call yourself unless you're writing your own Handler class. `DisconnectHandler()` is different. This method is public, and--due to an intentional design decision--never called by the MAUI framework. Instead, *you* are expected to call it. MAUI's explaination is that the framework has no way of knowing when we'll want a control to be cleaned up. That's fair to a degree. But still completely bonkers. The MAUI framework has no problem assuming when we'd want a control *initialized*....
+`ConnectHandler()` is a protected method, so it's not something you will ever need to worry about or call yourself unless you're writing your own Handler class. `DisconnectHandler()` is different. This method is public, and--due to an intentional design decision--never called by the MAUI framework. Instead, *you* are expected to call it. MAUI's explanation is that the framework has no way of knowing when we'll want a control to be cleaned up. That's fair to a degree. But still completely bonkers. The MAUI framework has no problem assuming when we'd want a control *initialized*....
 
-I will note that calling `DisconnectHandler()` may have no practical effect. Depending on the control/platform it might prevent a leak. It might not. It might help compartmentalize a leak. It might not. The point is, we don't know. Control authors will create components that require its invocation and feel 'correct' in doing so since the docs say its OK. Bonkers.
+I will note that calling `DisconnectHandler()` may have no practical effect. Depending on the control/platform, it might prevent a leak. It might not. It might help compartmentalize a leak. It might not. The point is, we don't know. Control authors will create components that require its invocation and feel 'correct' in doing so since the docs say it's OK. Bonkers.
 
-If manually calling `DisconnectHandler()`on every label, image, button, border, and frame in your MAUI app isn't your idea of fun, MemoryToolkit.Maui has some good news for you. As part of the automated de-construction process, it also calls `DisconnectHandler()` for you, preventing an entire class of leaks with a single attached property.
+If manually calling `DisconnectHandler()` on every label, image, button, border, and frame in your MAUI app isn't your idea of fun, MemoryToolkit.Maui has some good news for you. As part of the automated de-construction process, it also calls `DisconnectHandler()` for you, preventing an entire class of leaks with a single attached property.
 
 ## Using MemoryToolkit.Maui
 
 ### Leak Detection
 
-MemoryToolkit.Maui makes detecting your leaky pages and views *during development* easy by providing an attached behavior that can be applied to a `Page` or any other `VisualElement`, `GCMonitorBehavior.Cascade`. When set to 'true', the behavior will hook into the VisualElement's `Unload` event. When triggered, it walks the visual tree and uses the library's `GCCollectionMonitor` class to create and track `WeakReference`s for each `VisualElement` (and their Handlers). The `GCCollectionMonitor` class exposes a method `ForceCollectionAsync(..)`, which forces a series full GC runs (a quirk necessary to get mono-based GCs to behave deterministically). After each GC run, the monitor checks to see if each of its tracked weak references is still alive. If a weak reference is no longer alive, this means the GC has collected it and the object has not leaked, so the weak reference is removed and an optional callback is triggered (i.e. for logging). If a tracked object remains alive through all collection attempts, this means the object has mostly likely leaked and a different optional callback is triggered.
+MemoryToolkit.Maui makes detecting your leaky pages and views *during development* easy by providing an attached behavior that can be applied to a `Page` or any other `VisualElement`, `GCMonitorBehavior.Cascade`. When set to 'true', the behavior will hook into the VisualElement's `Unload` event. When triggered, it walks the visual tree and uses the library's `GCCollectionMonitor` class to create and track `WeakReference`s for each `VisualElement` (and their Handlers). The `GCCollectionMonitor` class exposes a method `ForceCollectionAsync(..)`, which forces a series full GC runs (a quirk necessary to get mono-based GCs to behave deterministically). After each GC run, the monitor checks to see if each of its tracked weak references is still alive. If a weak reference is no longer alive, this means the GC has collected it and the object has not leaked, so the weak reference is removed and an optional callback is triggered (i.e., for logging). If a tracked object remains alive through all collection attempts, this means the object has mostly likely leaked and a different optional callback is triggered.
 
 The ideal time to call `ForceCollectionAsync(..)` is immediately after a navigation event that causes your tracked page or view to be permanently removed. Navigation patterns in MAUI applications are not standardized, so figuring out where to call this method is left to the developer.
 
@@ -65,11 +65,11 @@ There may be situations where you want to prevent the `GCMonitorBehavior.Cascade
 
 #### Limitations
 
-`GCMonitorBehavior.Cascade` works by walking the visual tree **when the Unload event occurs.** This means that it will **not** catch leaks that may have occured in child views that were dynamically removed from the parent view. In these situations, you may want add another `GCMonitorBehavior.Cascade` in the subview. In more advanced scenarios (say, where you're caching views or moving them to a different page), use the `GCCollectionMonitor` directly to monitor views when you're done with them.
+`GCMonitorBehavior.Cascade` works by walking the visual tree **when the Unload event occurs.** This means that it will **not** catch leaks that may have occured in child views that were dynamically removed from the parent view. In these situations, you may want to add another `GCMonitorBehavior.Cascade` in the subview. In more advanced scenarios (say, where you're caching views or moving them to a different page), use the `GCCollectionMonitor` directly to monitor views when you're done with them.
 
 #### Production Use
 
-Using the `GCMonitorBehavior.Cascade` and `GCCollectionMonitor` in production may not be be desirable, as it forces several repeated full GC runs each time `ForceCollectionAsync(..)` is called. This may cause performance issues. However, since leaks can appear based on app state, this may be the lesser of two evils. Use with caution; feature flags are your friend.
+Using the `GCMonitorBehavior.Cascade` and `GCCollectionMonitor` in production may not be desirable, as it forces several repeated full GC runs each time `ForceCollectionAsync(..)` is called. This may cause performance issues. However, since leaks can appear based on app state, this may be the lesser of two evils. Use with caution; feature flags are your friend.
 
 ### Leak Compartmentalization & Prevention
 
@@ -81,7 +81,7 @@ In some cases, known leaks may be worked around by whacking the control into a s
 
 #### IMPORTANT!!
 
-If you're using both `GCMonitorBehavior.Cascade` and `AutoDisconnectBehavior.Cascade` attached properties, order matters. Since both walk the visual tree in response to the `Unload` event, `GCMonitorBehavior.Cascade()` should be attached *before* `AutoDisconnectBehavior.Cascade()`. You want the montior behavior running first--before the auto disconnect behavior deconstructs the page.
+If you're using both `GCMonitorBehavior.Cascade` and `AutoDisconnectBehavior.Cascade` attached properties, order matters. Since both walk the visual tree in response to the `Unload` event, `GCMonitorBehavior.Cascade()` should be attached *before* `AutoDisconnectBehavior.Cascade()`. You want the monitor behavior running first--before the auto disconnect behavior deconstructs the page.
 
 #### Limitations
 
