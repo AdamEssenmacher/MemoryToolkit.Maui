@@ -61,7 +61,7 @@ This convenience class logs tracked collections to a standard Microsoft `ILogger
 
 #### GCMonitorBehavior.Suppress
 
-There may be situations where you want to prevent the `GCMonitorBehavior.Cascade` from monitoring a subview. This could be because you're aware of a leak and want to suppress further warnings, or because you're using a view that you do not expect to be collected on unload (such as a view that is cached or reused). When walking the visual tree, `GCMonitorBehavior.Cascade` will skip any node with the attached property `GCMonitorBehavior.Suppress` set to 'true'.
+There may be situations where you want to prevent `GCMonitorBehavior.Cascade` from monitoring a subview. This could be because you're aware of a leak and want to suppress further warnings, or because you're using a view that you do not expect to be collected on unload (such as a view that is cached or reused). When walking the visual tree, `GCMonitorBehavior.Cascade` will skip any node with the attached property `GCMonitorBehavior.Suppress` set to 'true'.
 
 #### Limitations
 
