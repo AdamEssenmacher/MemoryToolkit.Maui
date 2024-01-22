@@ -27,7 +27,7 @@ Wouldn't it be nice if we could just get a notification as soon as a leak happen
 
 ### 2) Leak Compartmentalization
 
-Leaks happen... but they don't have to be *catastrophic*. Ideally, small leaks here and there are shouldn't be a big deal. The problem with MAUI is that small leaks are virtually guaranteed to become big leaks, spreading through entire pages and navigation stacks like a virus.
+Leaks happen... but they don't have to be *catastrophic*. Ideally, small leaks here and there shouldn't be a big deal. The problem with MAUI is that small leaks are virtually guaranteed to become big leaks, spreading through entire pages and navigation stacks like a virus.
 
 Ship builders know how important it is to compartmentalize their ship designs. If a ship takes on water, it's important to keep that water contained to a single compartment. If the ship is compartmentalized, it can take on water and still stay afloat. If it's not, it will sink.
 
