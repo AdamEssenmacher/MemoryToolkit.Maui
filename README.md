@@ -14,7 +14,7 @@ I'm only testing this on Android/iOS. Please let me know if you have any issues 
 
 Anyone paying attention knows that MAUI leaks like a toddler's sippy cup. Aside from these leaks being messy and gross, they also feel helplessly unavoidable. The root causes of this leakiness are so deeply ingrained in MAUI's architecture that we realistically have to accept it as just part of MAUI development.
 
-MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It does this by addressing three key areas:
+MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It addresses three key areas: leak detection, leak compartmentalization, and leak prevention.
 
 ### 1) Leak Detection
 
