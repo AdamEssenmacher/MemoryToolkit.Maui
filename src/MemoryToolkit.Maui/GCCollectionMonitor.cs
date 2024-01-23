@@ -4,8 +4,8 @@ public interface IGCCollectionMonitor
 {
     Task ForceCollectionAsync(Action<GCCollectionItem>? onLeaked = null,
         Action<GCCollectionItem>? onCollected = null,
-        int maxCollections = 25,
-        int msBetweenCollections = 100);
+        int maxCollections = 20,
+        int msBetweenCollections = 500);
 
     void Monitor(object target,
         string? name = null,
