@@ -1,12 +1,19 @@
-# MemoryToolkit.Maui
+# Overview
 
-## Features
+Anyone paying attention knows that MAUI leaks like a toddler's sippy cup. Aside from these leaks being messy and gross, they also feel helplessly unavoidable.
 
-- Detects memory leaks in MAUI views/pages, and notifies you when they occur at runtime.
-- Compartmentalizes leaks by de-constructing views/pages when they're no longer needed.
-- Automatically calls `DisconnectHandler()` on MAUI controls to help prevent leaks.
+MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It offers three helpful features:
 
-## Leaks discovered using this toolkit
+- **Detects leaks** in MAUI views/pages, and notifies you when they occur at runtime.
+- **Compartmentalizes & prevents leaks** by breaking apart pages and views when they're no longer needed.
+- **Prevents leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()` on view/page handlers.
+
+# Platform Support
+
+I'm only testing this on Android/iOS. Please let me know if you have any issues on other platforms.
+
+
+# Leaks discovered using this toolkit
 - :white_square_button: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
 - :white_square_button: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called
 - :white_square_button: https://github.com/mono/SkiaSharp.Extended/issues/250 SKLottieView captures window Dispatcher as long as InAnimationEnabled is true
@@ -14,15 +21,57 @@
 - :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/issues/110 Strong event subscription in renderer causes control to leak, cascading to the page.
 - :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/pull/112 Explicit cleanup required on iOS to avoid ref counting leak, cascading to the page.
 
-## Platform Support
+# How to use
 
-I'm only testing this on Android/iOS. Please let me know if you have any issues on other platforms.
+## Installation
+This is still an early project and I'm iterating on it a lot (especially AutoDisconnectHandler). I'll publish a nuget when it's more stable. Until then, just clone the repo.
 
-## Overview
+## Using GCMonitoredApplication for automatic instrumentation
+The toolkit includes an Application subclass `GCMonitoredApplication` which will monitor your MAUI app for common navigation events and call `GCCollectionMonitor.ForceCollectionAsync(..)` automatically. Navigation in MAUI apps isn't standardized, so this might not cover all of your nav events. In those cases, it is left to you to call `GCCollectionMonitor.ForceCollectionAsync(..)` where appropriate.
 
-Anyone paying attention knows that MAUI leaks like a toddler's sippy cup. Aside from these leaks being messy and gross, they also feel helplessly unavoidable. The root causes of this leakiness are so deeply ingrained in MAUI's architecture that we realistically have to accept it as just part of MAUI development.
+Note that automatic instrumentation will **not** work for Shell apps. I'll accept any PRs to include it.
 
-MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It addresses three key areas: leak detection, leak compartmentalization, and leak prevention.
+To use, modify your App.xaml like:
+
+```xaml
+<mtk:GCMonitoredApplication xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                            xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                            xmlns:mtk="clr-namespace:MemoryToolkit.Maui;assembly=MemoryToolkit.Maui"
+                            x:Class="Scavos.Maui.App"
+                            ShowMemToolkitAlerts="True">
+```
+By default, a `GCMonitoredApplication` will log collections of monitored objects at the Trace level. When monitored objects fail to be collected, a message will be logged at the Warn level and a runtime UI alert will be displayed.
+
+### Customizing GCMonitoredApplication
+You may set the BindableProperty `ShowMemToolkitAlerts` to false (true is the default) to disable runtime UI alerts when leaks are detected.
+
+You may also take total control of collection/leak event callbacks by subclassing `GCMonitoredApplication` and overriding `OnLeaked` or `OnCollected`.
+
+## Monitor for leaks with GCMonitorBehavior.Cascade
+`GCMonitorBehavior.Cascade` is an [attached behavior](https://learn.microsoft.com/en-us/dotnet/maui/fundamentals/behaviors?view=net-maui-8.0#attached-behaviors) that works in tandem with `GCCollectionMonitor` to register your app's pages/views and their [handlers](https://learn.microsoft.com/en-us/dotnet/maui/user-interface/handlers/?view=net-maui-8.0) for GC collection monitoring.
+
+Monitoring collection of a page/view (and all its subviews) is as simple as adding the attached property:
+
+```xaml
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:mtk="clr-namespace:MemoryToolkit.Maui;assembly=MemoryToolkit.Maui"
+             x:Class="My.App.Views.SamplePage"
+             mtk:GCMonitorBehavior.Cascade="True">
+```
+When set to 'True", this attached behavior will respond to the view's `Unload` event by walking the visual tree (via `GetVisualChildren()`) and register each element (and its handler) that it finds for expected garbage collection.
+
+That's it! You can be sure GC monitoring is hooked up correctly by watching out for Trace logs:
+
+<img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/913d4ee4-029e-482e-836d-c43df41ead87" height="200">
+
+If you're unlucky enough to have discovered a leak, you'll see at least one error dialog:
+<img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/6815c761-d5c6-4948-94ad-49bc446ba081" height="200">
+
+
+
+
+---------------------
 
 ### 1) Leak Detection
 
