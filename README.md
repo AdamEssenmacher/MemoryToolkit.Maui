@@ -8,6 +8,9 @@ MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so inst
 - **Compartmentalizes & prevents leaks** by breaking apart pages and views when they're no longer needed.
 - **Prevents leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()` on view/page handlers.
 
+## Warning!
+While leak prevention & compartmentalization features are intended to be safe for production use, it may not be advisable to use leak detection in release builds due to excessive GC.Collect() calls needed to get the GC to behave deterministically.
+
 # Platform Notes
 
 I'm only testing this on Android/iOS. Please let me know if you have any issues on other platforms.
@@ -29,6 +32,7 @@ A running list of leaks I've discovered or isolated using this toolkit:
 This is still an early project and I'm iterating on it a lot (especially AutoDisconnectHandler). I'll publish a nuget when it's more stable. Until then, just clone the repo.
 
 ## Using GCMonitoredApplication for automatic instrumentation
+
 The toolkit includes an Application subclass `GCMonitoredApplication` which will monitor your MAUI app for common navigation events and call `GCCollectionMonitor.ForceCollectionAsync(..)` automatically. Navigation in MAUI apps isn't standardized, so this might not cover all of your nav events. In those cases, it is left to you to call `GCCollectionMonitor.ForceCollectionAsync(..)` where appropriate.
 
 Note that automatic instrumentation will **not** work for Shell apps. I'll accept any PRs to include it.
