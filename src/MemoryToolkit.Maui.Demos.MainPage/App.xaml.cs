@@ -4,8 +4,8 @@ namespace MemoryToolkit.Maui.Demos.MainPage;
 
 public partial class App
 {
-    public App(IGCCollectionMonitor gcCollectionMonitor, ILogger<App> logger)
-        : base(gcCollectionMonitor, logger)
+    public App(ILogger<App> logger)
+        : base(logger)
     {
         InitializeComponent();
 
