@@ -10,6 +10,7 @@
 - :white_square_button: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
 - :white_square_button: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called
 - :white_square_button: https://github.com/mono/SkiaSharp.Extended/issues/250 SKLottieView captures window Dispatcher as long as InAnimationEnabled is true
+- :white_square_button: https://github.com/dotnet/maui/issues/20121 iOS Border leaks when StorkeShape is set, cascading to the page.
 - :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/issues/110 Strong event subscription in renderer causes control to leak, cascading to the page.
 - :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/pull/112 Explicit cleanup required on iOS to avoid ref counting leak, cascading to the page.
 
