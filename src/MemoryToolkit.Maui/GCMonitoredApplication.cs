@@ -8,34 +8,45 @@ namespace MemoryToolkit.Maui;
 
 public class GCMonitoredApplication : Application
 {
-    private readonly IGCCollectionMonitor _collectionMonitor;
-    private readonly ILogger<GCMonitoredApplication> _logger;
-    private Page? _currentPage;
+    public static readonly BindableProperty ShowMemToolkitAlertsProperty =
+        BindableProperty.Create(nameof(ShowMemToolkitAlerts), typeof(bool), typeof(GCMonitoredApplication), true);
 
-    public GCMonitoredApplication(IGCCollectionMonitor collectionMonitor,
-        ILogger<GCMonitoredApplication> logger)
+    public GCMonitoredApplication(ILogger<GCMonitoredApplication> logger)
     {
-        _collectionMonitor = collectionMonitor;
-        _logger = logger;
-        
+        CollectionMonitor = GCCollectionMonitor.Instance;
+        Logger = logger;
+
         PropertyChanged += HandleMainPageChanged;
     }
 
+    protected IGCCollectionMonitor CollectionMonitor { get; set; }
+    protected Page? CurrentPage { get; set; }
+
+    public bool ShowMemToolkitAlerts
+    {
+        get => (bool)GetValue(ShowMemToolkitAlertsProperty);
+        set => SetValue(ShowMemToolkitAlertsProperty, value);
+    }
+
+    public ILogger<GCMonitoredApplication> Logger { get; set; }
+
     protected virtual void OnLeaked(GCCollectionItem item)
     {
-        _logger.LogWarning("❗🧟❗{TargetName} is a zombie", item.Name);
-        _currentPage?.DisplayAlert("💦Leak Detected💦", $"❗🧟❗{item.Name} is a zombie!", "OK");
+        Logger.LogWarning("❗🧟❗{TargetName} is a zombie", item.Name);
+
+        if (ShowMemToolkitAlerts)
+            CurrentPage?.DisplayAlert("💦Leak Detected💦", $"❗🧟❗{item.Name} is a zombie!", "OK");
     }
 
     protected virtual void OnCollected(GCCollectionItem item)
     {
-        _logger.LogTrace("✅{TargetName} released", item.Name);
+        Logger.LogTrace("✅{TargetName} released", item.Name);
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
         Window window = base.CreateWindow(activationState);
-        _currentPage = window.Page;
+        CurrentPage = window.Page;
         window.PropertyChanged += HandleWindowPageChanged;
 
         return window;
@@ -43,12 +54,12 @@ public class GCMonitoredApplication : Application
 
     public override void CloseWindow(Window window)
     {
-        _currentPage = null;
+        CurrentPage = null;
         window.PropertyChanged -= HandleWindowPageChanged;
         base.CloseWindow(window);
     }
 
-    private void HandleWindowPageChanged(object? sender, PropertyChangedEventArgs e)
+    protected void HandleWindowPageChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not Window window)
             return;
@@ -56,35 +67,35 @@ public class GCMonitoredApplication : Application
         if (e.PropertyName != nameof(Window.Page))
             return;
 
-        Page? lastPage = _currentPage;
+        Page? lastPage = CurrentPage;
         if (lastPage is NavigationPage lastNavPage)
             lastNavPage.Popped -= NavPageOnPopped;
 
-        _currentPage = window.Page;
-        if (_currentPage is NavigationPage currentNavPage)
+        CurrentPage = window.Page;
+        if (CurrentPage is NavigationPage currentNavPage)
             currentNavPage.Popped += NavPageOnPopped;
 
-        _collectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
+        CollectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
     }
-    
-    private void HandleMainPageChanged(object? sender, PropertyChangedEventArgs e)
+
+    protected void HandleMainPageChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(MainPage))
             return;
 
-        Page? lastPage = _currentPage;
+        Page? lastPage = CurrentPage;
         if (lastPage is NavigationPage lastNavPage)
             lastNavPage.Popped -= NavPageOnPopped;
-        
-        _currentPage = MainPage;
-        if(_currentPage is NavigationPage currentNavPage)
+
+        CurrentPage = MainPage;
+        if (CurrentPage is NavigationPage currentNavPage)
             currentNavPage.Popped += NavPageOnPopped;
 
-        _collectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
+        CollectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
     }
 
-    private void NavPageOnPopped(object? sender, NavigationEventArgs e)
+    protected void NavPageOnPopped(object? sender, NavigationEventArgs e)
     {
-        _collectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
+        CollectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
     }
 }
