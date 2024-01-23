@@ -8,12 +8,14 @@ MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so inst
 - **Compartmentalizes & prevents leaks** by breaking apart pages and views when they're no longer needed.
 - **Prevents leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()` on view/page handlers.
 
-# Platform Support
+# Platform Notes
 
 I'm only testing this on Android/iOS. Please let me know if you have any issues on other platforms.
 
+Also, the nature of leaks in MAUI often makes them platform-specific, so be sure to test all of your target platforms separately.
 
-# Leaks discovered using this toolkit
+# Scoreboard
+A running list of leaks I've discovered or isolated using this toolkit:
 - :white_square_button: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
 - :white_square_button: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called
 - :white_square_button: https://github.com/mono/SkiaSharp.Extended/issues/250 SKLottieView captures window Dispatcher as long as InAnimationEnabled is true
@@ -59,7 +61,7 @@ Monitoring collection of a page/view (and all its subviews) is as simple as addi
              x:Class="My.App.Views.SamplePage"
              mtk:GCMonitorBehavior.Cascade="True">
 ```
-When set to 'True", this attached behavior will respond to the view's `Unload` event by walking the visual tree (via `GetVisualChildren()`) and register each element (and its handler) that it finds for expected garbage collection.
+When set to 'True", this attached behavior will respond to the view's `Unload` event by walking the visual tree (via `GetVisualChildren()`) registering each element (and its handler) that it finds for expected garbage collection.
 
 That's it! You can be sure GC monitoring is hooked up correctly by watching out for Trace logs:
 
@@ -68,78 +70,49 @@ That's it! You can be sure GC monitoring is hooked up correctly by watching out 
 If you're unlucky enough to have discovered a leak, you'll see at least one error dialog:
 <img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/6815c761-d5c6-4948-94ad-49bc446ba081" height="200">
 
+**!IMPORTANT!** Since this behavior walks the visual tree on Unload, it will **not** catch subviews that may have been dynamically removed from the host view. In these cases, consider adding another `GCMonitorBehavior.Cascade` property to the subview, or otherwise manually manage registering such views with `GCCollectionMonitor`.
 
+### Suppressing GCMonitorBehavior.Cascade
+When walking the visual tree, `GCMonitorBehavior.Cascade` will skip any view (and its subviews) if that view has the attached property `GCMonitorBehavior.Suppress` set to 'true'. You may wish to do this if you're already aware of a leak and wish to suppress further warnings. Or, in more advanced scenarios, you may not actually expect that view to be collectible once it is unloaded (for example, for view caching). In this situations, manually register such views with `GCCollectionMonitor` when you are done with them.
 
+## Compartmentalize & prevent leaks with AutoDisconnectBehavior.Cascade
+When `GCMonitorBehavior` finds leaks, you will likely be alarmed by _how many_ it finds. You're very likely to discover whole pages where **nothing** is being collected at all. You might even think this toolkit is reporting false positives. Surely _everything_ isn't leaking... right?
 
----------------------
+Unfortunately, leaks spread through MAUI views like a zombie virus. Out of the box, they'll typically compartmentalize at the Page level. Meaning, a leak of any size will grow to consume its entire host page. This is **bad news**. Particularly for NavigationPages!
 
-### 1) Leak Detection
+There's some good news though! The attached behavior `AutoDisconnectBehavior.Cascade` is surprisingly effective at preventing leaks (for reasons I'll explain later). When it can't prevent leaks, it will at least compartmentalize them--which both prevents them from infecting their host pages and isolates the offending control for further analysis.
 
-While detecting leaks in MAUI isn't necessarily *difficult*, the reality is that the vast majority of leaks just go unnoticed. From .NET 6 to 8, over a dozen [basic standard MAUI controls](https://github.com/dotnet/maui/issues/18365) were leaking.
-The tools we have right now to detect memory leaks are limited, clunky, and can be difficult to use and understand. Check out the [offical guidance](https://github.com/dotnet/maui/wiki/Memory-Leaks#tooling-to-find-leaks). How likely are you to work generating and analyzing `.gcdump` files into your everyday dev cycles?
+Attaching this behavior is just like with `GCMonitorBehavior.Cascade`:
+```xaml
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:mtk="clr-namespace:MemoryToolkit.Maui;assembly=MemoryToolkit.Maui"
+             x:Class="My.App.Views.SamplePage"
+             mtk:GCMonitorBehavior.Cascade="True"
+             mtk:AutoDisconnectBehavior.Cascade="True">
+```
 
-The MAUI team is doing good work to fix leaks in standard controls. They even have automated tests in place to prevent regressions! However, even now, the Border control leaks on iOS if the `StrokeShape` property is set. This demonstrates that some leaks are only going to manifest themselves in certain scenarios, and that we cannot rely on MAUI's quality control to catch them all. We need to monitor our own apps for leaks.
+**!IMPORTANT!** When attaching both GCMonitorBehavior and AutoDisconnectBehavior, order matters. `AutoDisconnectBehavior.Cascade` is quite destructive. It achieves compartmentalization by tearing the visual tree apart, which will circumvent `GCMonitorBehavior`'s attempts to gather views for monitoring. So, make sure `AutoDisconnectBehavior` always comes after `GCMonitorBehavior`.
 
-Wouldn't it be nice if we could just get a notification as soon as a leak happens? Maybe log a warning, or even display a UI alert? MemoryToolkit.Maui does this! It even lets you know which component(s) have leaked so you don't have to resort to the typical binary chop method to isolate it.
+Just like with `GCMonitorBehavior`, `AutoDisconnectBehavior` offers an opt-out attached property `AutoDisconnectBehavior.Suppress` that can be used to exclude any view (and its subviews) from the effects of `AutoDisconnectBehavior.Cascade`
 
-### 2) Leak Compartmentalization
+Also, just like with `GCMonitorBehavior`, `AutoDisconnectBehavior` will _not_ get a chance to run on views that may have been removed from the host view dynamically. In these cases, add another `AutoDisconnectBehavior.Cascade` property on the subview.
 
-Leaks happen... but they don't have to be *catastrophic*. Ideally, small leaks here and there shouldn't be a big deal. The problem with MAUI is that small leaks are virtually guaranteed to become big leaks, spreading through entire pages and navigation stacks like a virus.
+### How does AutoDisconnectBehavior work?
+While quite effective, `AutoDisconnectBehavior.Cascade` is an extremely destructive double-edged blade. As such, it's important that you understand what it does.
 
-Ship builders know how important it is to compartmentalize their ship designs. If a ship takes on water, it's important to keep that water contained to a single compartment. If the ship is compartmentalized, it can take on water and still stay afloat. If it's not, it will sink.
+#### Phase 1) Compartmentalization
+**The first edge:** The behavior does its best to remove any references each view has to other views. It does this by calling `ClearLogicalChildren()` and setting other properties to null (such as `ItemsSource`, `Content`, and `Parent`) before finally clearing the BindingContext. If this step fails to remove references to other objects, the leak will spread. I expect that this process will improve as MemoryToolkit.Maui matures.
 
-MAUI's architecture makes leak compartmentalization about as effective as the _RMS Titanic_'s. MemoryToolkit.Maui works to improve the situation by de-constructing your pages and views when they're no longer needed. This deconstruction usually won't prevent a leak (though sometimes it will!), but it can at least prevent leaks from spreading like a zombie apocalypse.
+#### Phase 2) BindingContext/Reset
+`AutoDisconnectBehavior` doesn't actually do anything active during this phase. With the MAUI view having been basically reset and its BindingContext cleared, its (still connected) Handler will (or at least, _should_) restore the underlying native platform control to a near-default state where leaks are least likely to happen.
 
-### 3) Leak Prevention (i.e. `DisconnectHandler()`)
-
-For those who don't know, MAUI is an abstraction over native UI frameworks. This means that MAUI controls are not actually the UI controls you see on the screen (at least, not directly). Instead, they're just a representation of native controls, which are mapped via a `Handler`. These handlers are really important in MAUI. They're the bridge between the platform-agnostic MAUI world and the native platform world. We don't have to dig too deep into how Handlers work, but you should know that they have two very important methods: `ConnectHandler()` and `DisconnectHandler()`
-
-These two methods pretty much do what it sounds like they might. `ConnectHandler()` is where the handler sets up the native control, wires up event subscriptions, and establishes any other resources it needs. DisconnectHandler() reverses the process, cleaning up the native control, unsubscribing from events, and disposing any other resources.
-
-`ConnectHandler()` is a protected method, so it's not something you will ever need to worry about or call yourself unless you're writing your own Handler class. `DisconnectHandler()` is different. This method is public, and--due to an intentional design decision--never called by the MAUI framework. Instead, *you* are expected to call it. MAUI's explanation is that the framework has no way of knowing when we'll want a control to be cleaned up. That's fair to a degree. But still completely bonkers. The MAUI framework has no problem assuming when we'd want a control *initialized*....
-
-I will note that calling `DisconnectHandler()` may have no practical effect. Depending on the control/platform, it might prevent a leak. It might not. It might help compartmentalize a leak. It might not. The point is, we don't know. Control authors will create components that require its invocation and feel 'correct' in doing so since the docs say it's OK. Bonkers.
-
-If manually calling `DisconnectHandler()` on every label, image, button, border, and frame in your MAUI app isn't your idea of fun, MemoryToolkit.Maui has some good news for you. As part of the automated de-construction process, it also calls `DisconnectHandler()` for you, preventing an entire class of leaks with a single attached property.
-
-## Using MemoryToolkit.Maui
-
-### Leak Detection
-
-MemoryToolkit.Maui makes detecting your leaky pages and views *during development* easy by providing an attached behavior that can be applied to a `Page` or any other `VisualElement`, `GCMonitorBehavior.Cascade`. When set to 'true', the behavior will hook into the VisualElement's `Unload` event. When triggered, it walks the visual tree and uses the library's `GCCollectionMonitor` class to create and track `WeakReference`s for each `VisualElement` (and their Handlers). The `GCCollectionMonitor` class exposes a method `ForceCollectionAsync(..)`, which forces a series full GC runs (a quirk necessary to get mono-based GCs to behave deterministically). After each GC run, the monitor checks to see if each of its tracked weak references is still alive. If a weak reference is no longer alive, this means the GC has collected it and the object has not leaked, so the weak reference is removed and an optional callback is triggered (i.e., for logging). If a tracked object remains alive through all collection attempts, this means the object has mostly likely leaked and a different optional callback is triggered.
-
-The ideal time to call `ForceCollectionAsync(..)` is immediately after a navigation event that causes your tracked page or view to be permanently removed. Navigation patterns in MAUI applications are not standardized, so figuring out where to call this method is left to the developer.
-
-#### GCMonitoredApplication
-
-As a matter of convenience (as well as to provide an example), this library also offers an `Application` subclass `GCMonitoredApplication` that monitors for common navigation events and calls `ForceCollectionAsync(..)` automatically. This implementation only works for MAUI apps that use IWindowCreator for their root navigation (e.g. Prism), or for apps that set `MainPage` directly. I'm open to PRs extending this to Shell apps. My Shell experience is limited, as the first thing I usually do with a MAUI app is remove it with prejudice.
-
-This convenience class logs tracked collections to a standard Microsoft `ILogger` at the trace level and leaks at the warn level. In addition, a UI alert is displayed when a leak is detected, so it is only meant to be used in development.
-
-#### GCMonitorBehavior.Suppress
-
-There may be situations where you want to prevent `GCMonitorBehavior.Cascade` from monitoring a subview. This could be because you're aware of a leak and want to suppress further warnings, or because you're using a view that you do not expect to be collected on unload (such as a view that is cached or reused). When walking the visual tree, `GCMonitorBehavior.Cascade` will skip any node with the attached property `GCMonitorBehavior.Suppress` set to 'true'.
-
-#### Limitations
-
-`GCMonitorBehavior.Cascade` works by walking the visual tree **when the Unload event occurs.** This means that it will **not** catch leaks that may have occured in child views that were dynamically removed from the parent view. In these situations, you may want to add another `GCMonitorBehavior.Cascade` in the subview. In more advanced scenarios (say, where you're caching views or moving them to a different page), use the `GCCollectionMonitor` directly to monitor views when you're done with them.
-
-#### Production Use
-
-Using the `GCMonitorBehavior.Cascade` and `GCCollectionMonitor` in production may not be desirable, as it forces several repeated full GC runs each time `ForceCollectionAsync(..)` is called. This may cause performance issues. However, since leaks can appear based on app state, this may be the lesser of two evils. Use with caution; feature flags are your friend.
-
-### Leak Compartmentalization & Prevention
-
-MemoryToolkit.Maui delivers these features through another simple attached property, `AutoDisconnectBehavior.Cascade`. The approach used here is very similar to `GCMonitorBehavior.Cascade`. The behavior hooks into the view's `Unload` event and walks the visual tree when triggered. Using a depth-first approach, and working from the bottom-up, the behavior calls `DisconnectHandler()` on each view before setting its `Parent` property to `null`--thus compartmentalizing any potential leaks.
+#### Phase 3) DisconnectHandler()
+**The second edge:** After giving the platform handlers their chance to react to a now-empty view, `AutoDisconnectHandler` calls `DisconnectHandler()` on the view's Handler. It's incredibly absurd that MAUI's design left this method to never be called automatically by the framework, instead expecting us developers to call it for each and every image, frame, label, and button in our apps. Using `AutoDisconnectBehavior.Cascade` effectively reverses this approach, making automatic view cleanup on Unload 'opt-out' instead of 'opt-in'.
 
 #### Advanced Use: Custom deconstruction hook
 
-In some cases, known leaks may be worked around by whacking the control into a safe state. For example, an `SKLottieView` from SkiaSharp is known to leak as long as its `IsAnimationEnabled` property is True. The `AutoDisconnectBehavior` class offers a static event `OnDisconnectingHandler` that is invoked immediately before the call to `DisconnectHandler()`. You may use this hook to examine the view and change its state.
+In some cases, known leaks may be worked around by whacking the control into a safe state when we're done with it. For example, an `SKLottieView` from SkiaSharp is known to leak as long as its `IsAnimationEnabled` property is True. The `AutoDisconnectBehavior` class offers a static event `OnDisconnectingHandler` that is invoked immediately before each call to `DisconnectHandler()`. You may use this hook to examine the view and change its state.
 
-#### IMPORTANT!!
-
-If you're using both `GCMonitorBehavior.Cascade` and `AutoDisconnectBehavior.Cascade` attached properties, order matters. Since both walk the visual tree in response to the `Unload` event, `GCMonitorBehavior.Cascade()` should be attached *before* `AutoDisconnectBehavior.Cascade()`. You want the monitor behavior running first--before the auto disconnect behavior deconstructs the page.
-
-#### Limitations
-
-Just like with `GCMonitorBehavior.Cascade`, `AutoDisconnectBehavior.Cascade` will not be able to reach views that have been dynamically removed from a parent view.
+# More resources
+https://github.com/dotnet/maui/wiki/Memory-Leaks
