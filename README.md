@@ -6,6 +6,9 @@
 - Compartmentalizes leaks by de-constructing views/pages when they're no longer needed.
 - Automatically calls `DisconnectHandler()` on MAUI controls to help prevent leaks.
 
+## Leaks discovered using this toolkit
+- https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
+
 ## Platform Support
 
 I'm only testing this on Android/iOS. Please let me know if you have any issues on other platforms.
