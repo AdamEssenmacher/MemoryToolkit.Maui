@@ -8,6 +8,7 @@
 
 ## Leaks discovered using this toolkit
 - https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
+- https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called
 
 ## Platform Support
 
