@@ -72,18 +72,47 @@ public static class AutoDisconnectBehavior
 
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
                 Disconnect(childElement);
-
+            
             if (vte is VisualElement visualElement)
             {
-                OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(visualElement));
-                visualElement.Handler?.DisconnectHandler();
+                // First, isolate the element. This will null out the binding context if it is inherited,
+                visualElement.ClearLogicalChildren();
                 visualElement.Parent = null;
+                
+                if (vte is ListView listView)
+                    listView.ItemsSource = null;
+                else if (vte is ContentView contentView)
+                    contentView.Content = null;
+                else if (vte is Border border)
+                    border.Content = null;
+                else if (vte is ContentPage contentPage)
+                    contentPage.Content = null;
+                
+                // Next, clear the BindingContext (if it is not inherited)
+                visualElement.BindingContext = null;
+                
+                // With the binding context cleared, and the element isolated, it has a chance to revert itself
+                // to a 'default' state.
+
+                // The _last_ thing we want to do is disconnect the handler.
+                if (visualElement.Handler != null)
+                {
+                    OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(visualElement));
+                    visualElement.Handler.DisconnectHandler();
+                }
             }
             else if (vte is Element element)
             {
-                OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(element));
-                element.Handler?.DisconnectHandler();
+                element.ClearLogicalChildren();
                 element.Parent = null;
+
+                element.BindingContext = null;
+                
+                if (element.Handler != null)
+                {
+                    OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(element));
+                    element.Handler.DisconnectHandler();
+                }
             }
         }
     }
