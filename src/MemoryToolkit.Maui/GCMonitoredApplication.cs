@@ -13,13 +13,10 @@ public class GCMonitoredApplication : Application
 
     public GCMonitoredApplication(ILogger<GCMonitoredApplication> logger)
     {
-        CollectionMonitor = GCCollectionMonitor.Instance;
         Logger = logger;
 
         PropertyChanged += HandleMainPageChanged;
     }
-
-    protected IGCCollectionMonitor CollectionMonitor { get; set; }
     protected Page? CurrentPage { get; set; }
 
     public bool ShowMemToolkitAlerts
@@ -30,7 +27,7 @@ public class GCMonitoredApplication : Application
 
     public ILogger<GCMonitoredApplication> Logger { get; set; }
 
-    protected virtual void OnLeaked(GCCollectionItem item)
+    public virtual void OnLeaked(GCCollectionItem item)
     {
         Logger.LogWarning("❗🧟❗{TargetName} is a zombie", item.Name);
 
@@ -38,7 +35,7 @@ public class GCMonitoredApplication : Application
             CurrentPage?.DisplayAlert("💦Leak Detected💦", $"❗🧟❗{item.Name} is a zombie!", "OK");
     }
 
-    protected virtual void OnCollected(GCCollectionItem item)
+    public virtual void OnCollected(GCCollectionItem item)
     {
         Logger.LogTrace("✅{TargetName} released", item.Name);
     }
@@ -67,15 +64,7 @@ public class GCMonitoredApplication : Application
         if (e.PropertyName != nameof(Window.Page))
             return;
 
-        Page? lastPage = CurrentPage;
-        if (lastPage is NavigationPage lastNavPage)
-            lastNavPage.Popped -= NavPageOnPopped;
-
         CurrentPage = window.Page;
-        if (CurrentPage is NavigationPage currentNavPage)
-            currentNavPage.Popped += NavPageOnPopped;
-
-        CollectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
     }
 
     protected void HandleMainPageChanged(object? sender, PropertyChangedEventArgs e)
@@ -83,19 +72,6 @@ public class GCMonitoredApplication : Application
         if (e.PropertyName != nameof(MainPage))
             return;
 
-        Page? lastPage = CurrentPage;
-        if (lastPage is NavigationPage lastNavPage)
-            lastNavPage.Popped -= NavPageOnPopped;
-
         CurrentPage = MainPage;
-        if (CurrentPage is NavigationPage currentNavPage)
-            currentNavPage.Popped += NavPageOnPopped;
-
-        CollectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
-    }
-
-    protected void NavPageOnPopped(object? sender, NavigationEventArgs e)
-    {
-        CollectionMonitor.ForceCollectionAsync(OnLeaked, OnCollected);
     }
 }
