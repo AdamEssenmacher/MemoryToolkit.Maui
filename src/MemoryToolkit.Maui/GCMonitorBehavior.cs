@@ -51,28 +51,33 @@ public class GCMonitorBehavior
             return;
 
         var visualTreeElement = (IVisualTreeElement)senderElement;
+        
+        List<object> targets = new();
 
-        Monitor(visualTreeElement);
+        Monitor(visualTreeElement, true);
+
+        GCCollectionMonitor.Instance.MonitorAndForceCollectionAsync(targets);
 
         return;
 
-        void Monitor(IVisualTreeElement vte)
+        void Monitor(IVisualTreeElement vte, bool isRoot)
         {
             if (vte is not BindableObject bindableObject)
                 return;
 
-            if (GetSuppress(bindableObject))
+            // Suppress is self-explanatory. Cascade means it's already monitored, so no reason to double up.
+            if (GetSuppress(bindableObject) || (!isRoot && GetCascade(bindableObject)))
                 return;
 
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
-                Monitor(childElement);
+                Monitor(childElement, false);
 
-            GCCollectionMonitor.Instance.Monitor(vte);
+            targets.Add(vte);
 
             if (vte is VisualElement { Handler: not null } visualElement)
-                GCCollectionMonitor.Instance.Monitor(visualElement.Handler);
+                targets.Add(visualElement.Handler);
             else if (vte is Element { Handler: not null } element)
-                GCCollectionMonitor.Instance.Monitor(element.Handler);
+                targets.Add(element.Handler);
         }
     }
 }
