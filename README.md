@@ -5,8 +5,8 @@ Anyone paying attention knows that MAUI leaks like a toddler's sippy cup. Aside 
 MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It offers three helpful features:
 
 - **Detects leaks** in MAUI views/pages, and notifies you when they occur at runtime.
-- **Compartmentalizes & prevents leaks** by breaking apart pages and views when they're no longer needed.
-- **Prevents leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()` on view/page handlers.
+- **Compartmentalizes & prevents _some_ leaks** by breaking apart pages and views when they're no longer needed.
+- **Prevents _some_ leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()` on view/page handlers.
 
 ## Warning!
 While leak prevention & compartmentalization features are intended to be safe for production use, it may not be advisable to use leak detection in release builds due to excessive GC.Collect() calls needed to get the GC to behave deterministically.
@@ -33,9 +33,7 @@ This is still an early project and I'm iterating on it a lot (especially AutoDis
 
 ## Using GCMonitoredApplication for automatic instrumentation
 
-The toolkit includes an Application subclass `GCMonitoredApplication` which will monitor your MAUI app for common navigation events and call `GCCollectionMonitor.ForceCollectionAsync(..)` automatically. Navigation in MAUI apps isn't standardized, so this might not cover all of your nav events. In those cases, it is left to you to call `GCCollectionMonitor.ForceCollectionAsync(..)` where appropriate.
-
-Note that automatic instrumentation will **not** work for Shell apps. I'll accept any PRs to include it.
+The toolkit includes an Application subclass `GCMonitoredApplication`, which is used to get instrument automatic leak detection. This library will probably move away from an Application base class in the future, but for now it's a holdover from earlier iterations where monitoring relied on monitoring for navigation events.
 
 To use, modify your App.xaml like:
 
@@ -117,6 +115,9 @@ While quite effective, `AutoDisconnectBehavior.Cascade` is an extremely destruct
 #### Advanced Use: Custom deconstruction hook
 
 In some cases, known leaks may be worked around by whacking the control into a safe state when we're done with it. For example, an `SKLottieView` from SkiaSharp is known to leak as long as its `IsAnimationEnabled` property is True. The `AutoDisconnectBehavior` class offers a static event `OnDisconnectingHandler` that is invoked immediately before each call to `DisconnectHandler()`. You may use this hook to examine the view and change its state.
+
+## ControlTemplates
+A common use of the `ControlTemplate` is to change the appearance of a control at run time. For example, https://github.com/roubachof/Sharpnado.TaskLoaderView uses different control templates to show different views based on some data loading state (e.g. loading, loaded, error). Whenever ControlTemplates are being used in this way, it's a good idea to use the above attached properties on a per-template basis.
 
 # More resources
 https://github.com/dotnet/maui/wiki/Memory-Leaks
