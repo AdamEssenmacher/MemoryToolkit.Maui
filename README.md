@@ -29,7 +29,7 @@ A running list of leaks I've discovered or isolated using this toolkit:
 # How to use
 
 ## Installation
-This is still an early project and I'm iterating on it a lot (especially AutoDisconnectHandler). I'll publish a nuget when it's more stable. Until then, just clone the repo.
+This is still an early project and I'm iterating on it a lot (especially AutoDisconnectHandler). I'll publish a nuget when it's more stable. Until then, clone the repo and check back often :)
 
 ## Using GCMonitoredApplication for automatic instrumentation
 
