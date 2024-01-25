@@ -31,7 +31,7 @@ A running list of leaks I've discovered or isolated using this toolkit:
 ## Installation
 This is still an early project and I'm iterating on it a lot (especially AutoDisconnectHandler). I'll publish a nuget when it's more stable. Until then, clone the repo and check back often :)
 
-## Using GCMonitoredApplication for automatic instrumentation
+## Using GCMonitoredApplication for automatic leak detection instrumentation
 
 The toolkit includes an Application subclass `GCMonitoredApplication`, which is used to get instrument automatic leak detection. This library will probably move away from an Application base class in the future, but for now it's a holdover from earlier iterations where monitoring relied on monitoring for navigation events.
 
