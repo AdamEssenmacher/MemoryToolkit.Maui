@@ -19,7 +19,6 @@ Also, the nature of leaks in MAUI often makes them platform-specific, so be sure
 
 # Scoreboard
 A running list of leaks discovered or isolated using this toolkit.
-:white_square_button: == not fixed, :white_check_mark: == fixed
 - :white_square_button: https://github.com/dotnet/maui/issues/20163 Border leaks when StrokeShape is set via global style (as the OOTB MAUI template does)
 - :white_square_button: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
 - :white_square_button: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called
