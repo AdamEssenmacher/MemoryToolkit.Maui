@@ -58,20 +58,20 @@ public static class AutoDisconnectBehavior
 
         var visualTreeElement = (IVisualTreeElement)senderElement;
 
-        Disconnect(visualTreeElement);
+        Disconnect(visualTreeElement, true);
 
         return;
 
-        void Disconnect(IVisualTreeElement vte)
+        void Disconnect(IVisualTreeElement vte, bool isRoot)
         {
             if (vte is not BindableObject bindableObject)
                 return;
 
-            if (GetSuppress(bindableObject))
+            if (GetSuppress(bindableObject) || (!isRoot && GetCascade(bindableObject)))
                 return;
 
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
-                Disconnect(childElement);
+                Disconnect(childElement, false);
             
             if (vte is VisualElement visualElement)
             {
