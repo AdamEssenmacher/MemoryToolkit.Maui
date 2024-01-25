@@ -1,6 +1,6 @@
 # Overview
 
-Anyone paying attention knows that MAUI leaks like a toddler's sippy cup. Aside from these leaks being messy and gross, they also feel helplessly unavoidable.
+Anyone paying attention knows that MAUI leaks like a toddler's sippy cup. It's messy, gross, and feels helplessly unavoidable.
 
 MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It offers three helpful features:
 
