@@ -79,7 +79,9 @@ public class GCCollectionMonitor : IGCCollectionMonitor
         const int msBetweenCollections = 250;
         var currentCollection = 0;
 
-        var application = (GCMonitoredApplication)Application.Current!;
+        var application = Application.Current as GCMonitoredApplication;
+        if (application == null)
+            return;
 
         List<GCCollectionItem> collectionItems = targets
             .Select(t => new GCCollectionItem(t, null, application.OnLeaked, application.OnCollected))
