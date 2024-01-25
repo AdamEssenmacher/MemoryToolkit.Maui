@@ -33,7 +33,7 @@ This is still an early project and I'm iterating on it a lot (especially AutoDis
 
 ## Using GCMonitoredApplication for automatic leak detection instrumentation
 
-The toolkit includes an Application subclass `GCMonitoredApplication`, which is used to get instrument automatic leak detection. This library will probably move away from an Application base class in the future, but for now it's a holdover from earlier iterations where monitoring relied on monitoring for navigation events.
+The toolkit includes an Application subclass `GCMonitoredApplication`, which is used to instrument automatic leak detection. This library will probably move away from an Application base class in the future, but for now it's a holdover from earlier iterations where monitoring relied on monitoring for navigation events.
 
 To use, modify your App.xaml like:
 
