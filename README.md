@@ -44,7 +44,7 @@ To use, modify your App.xaml like:
                             x:Class="Scavos.Maui.App"
                             ShowMemToolkitAlerts="True">
 ```
-By default, a `GCMonitoredApplication` will log collections of monitored objects at the Trace level. When monitored objects fail to be collected, a message will be logged at the Warn level and a runtime UI alert will be displayed.
+By default, a `GCMonitoredApplication` logs the GC status of collected objects at the Trace level. When monitored objects fail to be collected as expected, a message is logged at the Warn level, and a runtime UI alert is shown.
 
 ### Customizing GCMonitoredApplication
 You may set the BindableProperty `ShowMemToolkitAlerts` to false (true is the default) to disable runtime UI alerts when leaks are detected.
@@ -72,7 +72,7 @@ That's it! You can be sure GC monitoring is hooked up correctly by watching out 
 If you're unlucky enough to have discovered a leak, you'll see at least one error dialog:
 <img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/6815c761-d5c6-4948-94ad-49bc446ba081" height="200">
 
-**!IMPORTANT!** Since this behavior walks the visual tree on Unload, it will **not** catch subviews that may have been dynamically removed from the host view. In these cases, consider adding another `GCMonitorBehavior.Cascade` property to the subview, or otherwise manually manage registering such views with `GCCollectionMonitor`.
+**!IMPORTANT!** Since this behavior walks the visual tree on Unload, it will **not** catch subviews that may have been dynamically removed from the parent view. In these cases, consider adding another `GCMonitorBehavior.Cascade` property to the subview, or otherwise manually manage using `GCCollectionMonitor`.
 
 ### Suppressing GCMonitorBehavior.Cascade
 When walking the visual tree, `GCMonitorBehavior.Cascade` will skip any view (and its subviews) if that view has the attached property `GCMonitorBehavior.Suppress` set to 'true'. You may wish to do this if you're already aware of a leak and wish to suppress further warnings. Or, in more advanced scenarios, you may not actually expect that view to be collectible once it is unloaded (for example, for view caching). In this situations, manually register such views with `GCCollectionMonitor` when you are done with them.
@@ -82,7 +82,7 @@ When `GCMonitorBehavior` finds leaks, you will likely be alarmed by _how many_ i
 
 Unfortunately, leaks spread through MAUI views like a zombie virus. Out of the box, they'll typically compartmentalize at the Page level. Meaning, a leak of any size will grow to consume its entire host page. This is **bad news**. Particularly for NavigationPages!
 
-There's some good news though! The attached behavior `AutoDisconnectBehavior.Cascade` is surprisingly effective at preventing leaks (for reasons I'll explain later). When it can't prevent leaks, it will at least compartmentalize them--which both prevents them from infecting their host pages and isolates the offending control for further analysis.
+There's some good news, though! The attached behavior `AutoDisconnectBehavior.Cascade` is surprisingly effective at preventing leaks (for reasons I'll explain later). When it can't prevent leaks, it will at least compartmentalize them--which both prevents them from infecting their host pages and helps isolate the offending control for further analysis.
 
 Attaching this behavior is just like with `GCMonitorBehavior.Cascade`:
 ```xaml
@@ -117,7 +117,7 @@ While quite effective, `AutoDisconnectBehavior.Cascade` is an extremely destruct
 In some cases, known leaks may be worked around by whacking the control into a safe state when we're done with it. For example, an `SKLottieView` from SkiaSharp is known to leak as long as its `IsAnimationEnabled` property is True. The `AutoDisconnectBehavior` class offers a static event `OnDisconnectingHandler` that is invoked immediately before each call to `DisconnectHandler()`. You may use this hook to examine the view and change its state.
 
 ## ControlTemplates
-A common use of the `ControlTemplate` is to change the appearance of a control at run time. For example, https://github.com/roubachof/Sharpnado.TaskLoaderView uses different control templates to show different views based on some data loading state (e.g. loading, loaded, error). Whenever ControlTemplates are being used in this way, it's a good idea to use the above attached properties on a per-template basis.
+A common use of the `ControlTemplate` is to change the appearance of a control at run time. For example, https://github.com/roubachof/Sharpnado.TaskLoaderView uses different control templates to show different views based on some loading state (e.g. loading, loaded, error). Whenever ControlTemplates are being used in this way, it's a good idea to use the above attached properties on a per-template basis.
 
 # More resources
 https://github.com/dotnet/maui/wiki/Memory-Leaks
