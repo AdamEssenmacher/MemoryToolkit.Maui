@@ -44,7 +44,7 @@ This is still an early project and I'm iterating on it a lot (especially AutoDis
 
 ## Using GCMonitoredApplication for automatic leak detection instrumentation
 
-The toolkit includes an Application subclass `GCMonitoredApplication`, which is used to instrument automatic leak detection. This library will probably move away from an Application base class in the future, but for now it's a holdover from earlier iterations where monitoring relied on monitoring for navigation events.
+The toolkit includes an Application subclass `GCMonitoredApplication`, which is used to instrument automatic leak logging/alerting. This library will probably move away from an Application base class in the future, but for now, it's a holdover from earlier iterations where GC monitoring relied on watching for navigation events.
 
 To use, modify your App.xaml like:
 
@@ -74,7 +74,7 @@ Monitoring collection of a page/view (and all its subviews) is as simple as addi
              x:Class="My.App.Views.SamplePage"
              mtk:GCMonitorBehavior.Cascade="True">
 ```
-When set to 'True", this attached behavior will respond to the view's `Unload` event by walking the visual tree (via `GetVisualChildren()`) registering each element (and its handler) that it finds for expected garbage collection.
+When set to 'True", this attached behavior will respond to the view's `Unloaded` event by walking the visual tree (via `GetVisualChildren()`) registering each element (and its handler) that it finds for expected garbage collection.
 
 That's it! You can be sure GC monitoring is hooked up correctly by watching out for Trace logs:
 
