@@ -12,7 +12,7 @@ public interface IGCCollectionMonitor
         Action<GCCollectionItem>? onLeaked = null,
         Action<GCCollectionItem>? onCollected = null);
 
-    Task MonitorAndForceCollectionAsync(IEnumerable<object> targets);
+    Task MonitorAndForceCollectionAsync(List<GCCollectionItem> collectionItems);
     
     void Reset();
 }
@@ -73,23 +73,11 @@ public class GCCollectionMonitor : IGCCollectionMonitor
         ));
     }
 
-    public async Task MonitorAndForceCollectionAsync(IEnumerable<object> targets)
+    public async Task MonitorAndForceCollectionAsync(List<GCCollectionItem> collectionItems)
     {
         const int maxCollections = 20;
         const int msBetweenCollections = 250;
         var currentCollection = 0;
-
-        var application = Application.Current as GCMonitoredApplication;
-        if (application == null)
-            return;
-
-        List<GCCollectionItem> collectionItems = targets
-            .Select(t => new GCCollectionItem(t, null, application.OnLeaked, application.OnCollected))
-            .ToList();
-        
-        // ReSharper disable once RedundantAssignment
-        // Clear reference so original targets can be collected
-        targets = null!;
         
         while (++currentCollection <= maxCollections)
         {

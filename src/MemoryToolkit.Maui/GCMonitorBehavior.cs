@@ -9,6 +9,9 @@ public class GCMonitorBehavior
     public static readonly BindableProperty SuppressProperty =
         BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(GCMonitorBehavior), false);
 
+    public static readonly BindableProperty NameProperty =
+        BindableProperty.CreateAttached("Name", typeof(string), typeof(GCMonitorBehavior), null);
+
     public static bool GetCascade(BindableObject view)
     {
         return (bool)view.GetValue(CascadeProperty);
@@ -27,6 +30,16 @@ public class GCMonitorBehavior
     public static void SetSuppress(BindableObject view, bool value)
     {
         view.SetValue(SuppressProperty, value);
+    }
+    
+    public static string GetName(BindableObject view)
+    {
+        return (string)view.GetValue(NameProperty);
+    }
+
+    public static void SetSuppress(BindableObject view, string value)
+    {
+        view.SetValue(NameProperty, value);
     }
 
     private static void CascadeChanged(BindableObject view, object oldValue, object newValue)
@@ -52,7 +65,7 @@ public class GCMonitorBehavior
 
         var visualTreeElement = (IVisualTreeElement)senderElement;
         
-        List<object> targets = new();
+        List<GCCollectionItem> targets = new();
 
         Monitor(visualTreeElement, true);
 
@@ -72,12 +85,20 @@ public class GCMonitorBehavior
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
                 Monitor(childElement, false);
 
-            targets.Add(vte);
+            Action<GCCollectionItem>? onLeaked = null;
+            Action<GCCollectionItem>? onCollected = null;
+            if (Application.Current is GCMonitoredApplication gcMonitoredApplication)
+            {
+                onLeaked = gcMonitoredApplication.OnLeaked;
+                onCollected = gcMonitoredApplication.OnCollected;
+            }
+
+            targets.Add(new GCCollectionItem(vte, GetName(bindableObject), onLeaked, onCollected));
 
             if (vte is VisualElement { Handler: not null } visualElement)
-                targets.Add(visualElement.Handler);
+                targets.Add(new GCCollectionItem(visualElement.Handler, null, onLeaked, onCollected));
             else if (vte is Element { Handler: not null } element)
-                targets.Add(element.Handler);
+                targets.Add(new GCCollectionItem(element.Handler, null, onLeaked, onCollected));
         }
     }
 }
