@@ -99,6 +99,8 @@ public static class AutoDisconnectBehavior
                 if (visualElement.Handler != null)
                 {
                     OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(visualElement));
+                    if(visualElement.Handler is IDisposable disposableHandler)
+                        disposableHandler.Dispose();
                     visualElement.Handler.DisconnectHandler();
                 }
             }
@@ -113,6 +115,8 @@ public static class AutoDisconnectBehavior
                 if (element.Handler != null)
                 {
                     OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(element));
+                    if(element.Handler is IDisposable disposableElementHandler)
+                        disposableElementHandler.Dispose();
                     element.Handler.DisconnectHandler();
                 }
             }
