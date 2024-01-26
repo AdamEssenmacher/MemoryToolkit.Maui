@@ -18,12 +18,22 @@ I'm only testing this on Android/iOS. Please let me know if you have any issues 
 Also, the nature of leaks in MAUI often makes them platform-specific, so be sure to test all of your target platforms separately.
 
 # Scoreboard
-A running list of leaks discovered or isolated using this toolkit.
-- :white_square_button: https://github.com/dotnet/maui/issues/20163 Border leaks when StrokeShape is set via global style (as the OOTB MAUI template does)
-- :white_square_button: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
-- :white_square_button: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called
-- :white_square_button: https://github.com/mono/SkiaSharp.Extended/issues/250 SKLottieView captures window Dispatcher as long as InAnimationEnabled is true
-- :white_square_button: https://github.com/dotnet/maui/issues/20121 iOS Border leaks when StrokeShape is set, cascading to the page.
+:white_square_button:: Discovered and/or isolated, but not mitigated
+
+:wrench:: Compartmentalized with MemoryToolkit.Maui
+
+:muscle:: Fixed with MemoryToolkit.Maui
+
+:white_check_mark:: Fixed in source
+
+
+- :white_square_button: https://github.com/dotnet/maui/issues/20163 Border leaks when StrokeShape is set via global style (as the OOTB MAUI template does), cascading to the page.
+- :white_square_button: https://github.com/roubachof/Sharpnado.CollectionView/pull/113 Native resources disposed in wrong order causes leak cascading to the page.
+- :wrench: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
+- :wrench: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called.
+- :muscle: https://github.com/dotnet/maui/issues/20025 ListView on iOS needs Dispose() called on handler to prevent leak, which cascades to the page.
+- :muscle: https://github.com/mono/SkiaSharp.Extended/issues/250 SKLottieView captures window Dispatcher as long as InAnimationEnabled is true, cascading to the page (* fix requires custom deconstruction hook).
+- :muscle: https://github.com/dotnet/maui/issues/20121 iOS Border leaks when StrokeShape is set, cascading to the page.
 - :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/issues/110 Strong event subscription in renderer causes control to leak, cascading to the page.
 - :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/pull/112 Explicit cleanup required on iOS to avoid ref counting leak, cascading to the page.
 
@@ -110,8 +120,8 @@ While quite effective, `AutoDisconnectBehavior.Cascade` is an extremely destruct
 #### Phase 2) BindingContext/Reset
 `AutoDisconnectBehavior` doesn't actually do anything active during this phase. With the MAUI view having been basically reset and its BindingContext cleared, its (still connected) Handler will (or at least, _should_) restore the underlying native platform control to a near-default state where leaks are least likely to happen.
 
-#### Phase 3) DisconnectHandler()
-**The second edge:** After giving the platform handlers their chance to react to a now-empty view, `AutoDisconnectHandler` calls `DisconnectHandler()` on the view's Handler. It's incredibly absurd that MAUI's design left this method to never be called automatically by the framework, instead expecting us developers to call it for each and every image, frame, label, and button in our apps. Using `AutoDisconnectBehavior.Cascade` effectively reverses this approach, making automatic view cleanup on Unload 'opt-out' instead of 'opt-in'.
+#### Phase 3) Cleanup
+**The second edge:** After giving the platform handlers their chance to react to a now-empty view, `AutoDisconnectHandler` calls `Dispose()` (if applicable) and then `DisconnectHandler()` on the view's Handler. It's incredibly absurd that MAUI's design left this method to never be called automatically by the framework, instead expecting us developers to call it for each and every image, frame, label, and button in our apps. Using `AutoDisconnectBehavior.Cascade` effectively reverses this approach, making automatic view cleanup on Unload 'opt-out' instead of 'opt-in'.
 
 #### Advanced Use: Custom deconstruction hook
 
