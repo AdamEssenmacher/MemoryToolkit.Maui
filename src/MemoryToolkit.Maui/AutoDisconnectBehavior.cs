@@ -76,7 +76,6 @@ public static class AutoDisconnectBehavior
             if (vte is VisualElement visualElement)
             {
                 // First, isolate the element. This will null out the binding context if it is inherited,
-                visualElement.ClearLogicalChildren();
                 visualElement.Parent = null;
                 
                 if (vte is ListView listView)
@@ -91,6 +90,8 @@ public static class AutoDisconnectBehavior
                 // Next, clear the BindingContext (if it is not inherited)
                 visualElement.BindingContext = null;
                 
+                visualElement.ClearLogicalChildren();
+                
                 // With the binding context cleared, and the element isolated, it has a chance to revert itself
                 // to a 'default' state.
 
@@ -103,10 +104,11 @@ public static class AutoDisconnectBehavior
             }
             else if (vte is Element element)
             {
-                element.ClearLogicalChildren();
                 element.Parent = null;
 
                 element.BindingContext = null;
+                
+                element.ClearLogicalChildren();
                 
                 if (element.Handler != null)
                 {
