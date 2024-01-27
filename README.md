@@ -27,9 +27,9 @@ Also, the nature of leaks in MAUI often makes them platform-specific, so be sure
 :white_check_mark:: Since fixed in source!
 
 
-- :white_square_button: https://github.com/dotnet/maui/issues/20163 Border leaks when StrokeShape is set via global style (as the OOTB MAUI template does), cascading to the page.
 - :wrench: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
 - :wrench: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called.
+- :muscle: https://github.com/dotnet/maui/issues/20163 Border leaks when StrokeShape is set via global style (as the OOTB MAUI template does), cascading to the page.
 - :muscle: https://github.com/dotnet/maui/issues/20195 ViewCells on iOS need Dispose() called on handler platform views to prevent leaks, which cascade to the page.
 - :muscle: https://github.com/dotnet/maui/issues/20025 ListView on iOS needs Dispose() called on handler to prevent leak, which cascades to the page.
 - :muscle: https://github.com/mono/SkiaSharp.Extended/issues/250 SKLottieView captures window Dispatcher as long as InAnimationEnabled is true, cascading to the page (* fix requires custom deconstruction hook).
