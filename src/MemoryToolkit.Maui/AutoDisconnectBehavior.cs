@@ -103,6 +103,8 @@ public static class AutoDisconnectBehavior
                         disposableHandler.Dispose();
                     visualElement.Handler.DisconnectHandler();
                 }
+
+                visualElement.Resources = null;
             }
             else if (vte is Element element)
             {
