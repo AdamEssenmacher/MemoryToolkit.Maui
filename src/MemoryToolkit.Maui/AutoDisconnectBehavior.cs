@@ -72,12 +72,12 @@ public static class AutoDisconnectBehavior
 
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
                 Disconnect(childElement, false);
-            
+
             if (vte is VisualElement visualElement)
             {
                 // First, isolate the element. This will null out the binding context if it is inherited,
                 visualElement.Parent = null;
-                
+
                 if (vte is ListView listView)
                     listView.ItemsSource = null;
                 else if (vte is ContentView contentView)
@@ -88,12 +88,12 @@ public static class AutoDisconnectBehavior
                     contentPage.Content = null;
                 else if (vte is ScrollView scrollView)
                     scrollView.Content = null;
-                
+
                 // Next, clear the BindingContext (if it is not inherited)
                 visualElement.BindingContext = null;
-                
+
                 visualElement.ClearLogicalChildren();
-                
+
                 // With the binding context cleared, and the element isolated, it has a chance to revert itself
                 // to a 'default' state.
 
@@ -101,9 +101,9 @@ public static class AutoDisconnectBehavior
                 if (visualElement.Handler != null)
                 {
                     OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(visualElement));
-                    if(visualElement.Handler is IDisposable disposableHandler)
+                    if (visualElement.Handler is IDisposable disposableHandler)
                         disposableHandler.Dispose();
-                    visualElement.Handler.DisconnectHandler();
+                    visualElement.Handler?.DisconnectHandler();
                 }
 
                 visualElement.Resources = null;
@@ -113,15 +113,20 @@ public static class AutoDisconnectBehavior
                 element.Parent = null;
 
                 element.BindingContext = null;
-                
+
                 element.ClearLogicalChildren();
-                
+
                 if (element.Handler != null)
                 {
                     OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(element));
-                    if(element.Handler.PlatformView is IDisposable disposablePlatformView)
+                    
+#if IOS
+                    // Fixes issue specific to ListView on iOS, where RealCell is not nulled out.
+                    if (element is ViewCell && element.Handler.PlatformView is IDisposable disposablePlatformView)
                         disposablePlatformView.Dispose();
-                    if(element.Handler is IDisposable disposableElementHandler)
+#endif
+
+                    if (element.Handler is IDisposable disposableElementHandler)
                         disposableElementHandler.Dispose();
                     element.Handler.DisconnectHandler();
                 }
