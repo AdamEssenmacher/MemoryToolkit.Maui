@@ -115,6 +115,8 @@ public static class AutoDisconnectBehavior
                 if (element.Handler != null)
                 {
                     OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(element));
+                    if(element.Handler.PlatformView is IDisposable disposablePlatformView)
+                        disposablePlatformView.Dispose();
                     if(element.Handler is IDisposable disposableElementHandler)
                         disposableElementHandler.Dispose();
                     element.Handler.DisconnectHandler();
