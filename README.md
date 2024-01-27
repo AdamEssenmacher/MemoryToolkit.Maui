@@ -28,7 +28,7 @@ Also, the nature of leaks in MAUI often makes them platform-specific, so be sure
 
 
 - :wrench: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
-- :wrench: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called.
+- :muscle: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called.
 - :muscle: https://github.com/dotnet/maui/issues/20163 Border leaks when StrokeShape is set via global style (as the OOTB MAUI template does), cascading to the page.
 - :muscle: https://github.com/dotnet/maui/issues/20195 ViewCells on iOS need Dispose() called on handler platform views to prevent leaks, which cascade to the page.
 - :muscle: https://github.com/dotnet/maui/issues/20025 ListView on iOS needs Dispose() called on handler to prevent leak, which cascades to the page.
