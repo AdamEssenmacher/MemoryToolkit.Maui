@@ -22,7 +22,7 @@ Also, the nature of leaks in MAUI often makes them platform-specific, so be sure
 
 :wrench:: Compartmentalized with MemoryToolkit.Maui
 
-:muscle:: Fixed with MemoryToolkit.Maui
+:muscle:: Fixed with `AutoDisconnectBehavior` from MemoryToolkit.Maui
 
 :white_check_mark:: Since fixed in source!
 
