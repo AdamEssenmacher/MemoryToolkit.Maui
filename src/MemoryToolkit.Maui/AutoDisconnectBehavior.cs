@@ -86,6 +86,8 @@ public static class AutoDisconnectBehavior
                     border.Content = null;
                 else if (vte is ContentPage contentPage)
                     contentPage.Content = null;
+                else if (vte is ScrollView scrollView)
+                    scrollView.Content = null;
                 
                 // Next, clear the BindingContext (if it is not inherited)
                 visualElement.BindingContext = null;
