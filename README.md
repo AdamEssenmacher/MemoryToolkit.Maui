@@ -28,7 +28,6 @@ Also, the nature of leaks in MAUI often makes them platform-specific, so be sure
 
 
 - :white_square_button: https://github.com/dotnet/maui/issues/20163 Border leaks when StrokeShape is set via global style (as the OOTB MAUI template does), cascading to the page.
-- :white_square_button: https://github.com/roubachof/Sharpnado.CollectionView/pull/113 Native resources disposed in wrong order causes leak cascading to the page.
 - :wrench: https://github.com/dotnet/maui/issues/20094 Page-level leak when using modal navigation in iOS.
 - :wrench: https://github.com/dotnet/maui/issues/20119 Navigation page leaks on iOS unless DisconnectHandler() is called.
 - :muscle: https://github.com/dotnet/maui/issues/20025 ListView on iOS needs Dispose() called on handler to prevent leak, which cascades to the page.
@@ -36,6 +35,7 @@ Also, the nature of leaks in MAUI often makes them platform-specific, so be sure
 - :muscle: https://github.com/dotnet/maui/issues/20121 iOS Border leaks when StrokeShape is set, cascading to the page.
 - :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/issues/110 Strong event subscription in renderer causes control to leak, cascading to the page.
 - :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/pull/112 Explicit cleanup required on iOS to avoid ref counting leak, cascading to the page.
+- :white_check_mark: https://github.com/roubachof/Sharpnado.CollectionView/pull/113 Native resources disposed in wrong order causes leak cascading to the page.
 
 # How to use
 
