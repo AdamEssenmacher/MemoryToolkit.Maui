@@ -2,11 +2,12 @@
 
 Anyone paying attention knows that MAUI leaks like a toddler's sippy cup. It's messy, gross, and feels helplessly unavoidable.
 
-MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It offers three helpful features:
+MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It offers some helpful features:
 
 - **Detects leaks** in MAUI views/pages, and notifies you when they occur at runtime.
 - **Compartmentalizes & prevents _some_ leaks** by breaking apart pages and views when they're no longer needed.
 - **Prevents _some_ leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()` on view/page handlers.
+- **Prevents _some_ leaks** by performing targeted cleanup measures that fix specific known (but unresolved) issues in standard MAUI controls.
 
 ## Warning!
 While leak prevention & compartmentalization features are intended to be safe for production use, it may not be advisable to use leak detection in release builds due to excessive GC.Collect() calls needed to get the GC to behave deterministically.
