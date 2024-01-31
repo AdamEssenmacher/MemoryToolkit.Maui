@@ -11,6 +11,12 @@ public static class AutoDisconnectBehavior
     public static readonly BindableProperty SuppressProperty =
         BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(AutoDisconnectBehavior), false);
 
+    // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
+    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();
+
+    // We also need to keep hold of navigation pages that we're subscribed to.
+    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = new();
+
 #pragma warning disable CS0067 // Event is never used
     public static event EventHandler<DisconnectingHandlerEventArgs>? OnDisconnectingHandler;
 #pragma warning restore CS0067 // Event is never used
@@ -50,19 +56,83 @@ public static class AutoDisconnectBehavior
 
     private static void OnVisualElementUnloaded(object? sender, EventArgs e)
     {
-        if (sender is not VisualElement senderElement)
+        if (sender is not VisualElement visualElement)
             return;
 
-        if (GetSuppress(senderElement))
+        if (GetSuppress(visualElement))
             return;
 
-        var visualTreeElement = (IVisualTreeElement)senderElement;
+        // If the VisualElement is ultimately hosted in a Navigation page, we only want to monitor for
+        // garbage collection if the element's page is no longer in the navigation stack
+        // OR if the navigation page itself gets unloaded.
 
-        Disconnect(visualTreeElement, true);
+        // Find the first parent element (or self) that is a Page. This is the containing or 'host' page.
+        Page? hostPage = null;
+        if (visualElement is Page self)
+        {
+            hostPage = self;
+        }
+        else
+        {
+            Element? parent = visualElement.Parent;
+            while (parent is not null)
+            {
+                if (parent is Page page)
+                {
+                    hostPage = page;
+                    break;
+                }
+
+                parent = parent.Parent;
+            }
+        }
+
+        // If the host page is null, or its parent is not a navigation page,
+        // then we're outside the scope of a navigation page can Monitor immediately.
+        // 
+        // If there is a navigation page, but it's not loaded, then we can Monitor immediately.
+        if (hostPage?.Parent is not NavigationPage { IsLoaded: true } navigationPage)
+        {
+            Disconnect(visualElement);
+            return;
+        }
+
+        // If we make it to this point, then we're in the scope of a navigation page.
+        // This means that the Unloaded event could be firing because the page is being popped, or pushed over.
+        // We don't know which it is yet.
+        // As a page is being popped, it will still be in the navigation stack,
+        // so we need to wait until the Popped event is fired before we can check.
+        // The following approach temporarily keeps track of the visual element and its host page.
+        // We then subscribe to the Popped event of the navigation page and wait for it to fire.
+
+        // Don't monitor the same object more than once. This could happen, for example,
+        // if the tracked element is in a page that has been pushed over multiple times.
+        foreach (Tuple<WeakReference<VisualElement>, WeakReference<Page>> tuple in TrackedElements.ToArray())
+            if (tuple.Item1.TryGetTarget(out VisualElement? target) && target == visualElement)
+                return;
+
+        TrackedElements.Add(new Tuple<WeakReference<VisualElement>, WeakReference<Page>>(
+            new WeakReference<VisualElement>(visualElement), new WeakReference<Page>(hostPage)));
+
+        // Don't subscribe to the same navigation page more than once.
+        foreach (WeakReference<NavigationPage> navPageReference in TrackedNavigationPages.ToArray())
+            if (!navPageReference.TryGetTarget(out NavigationPage? target))
+                TrackedNavigationPages.Remove(navPageReference);
+            else if (target == navigationPage)
+                return;
+
+        // This shouldn't cause memory leaks since the handlers are static.
+        navigationPage.Popped += OnNavigationPagePopped;
+        TrackedNavigationPages.Add(new WeakReference<NavigationPage>(navigationPage));
+    }
+
+    private static void Disconnect(IVisualTreeElement vte)
+    {
+        DisconnectImpl(vte, true);
 
         return;
 
-        void Disconnect(IVisualTreeElement vte, bool isRoot)
+        void DisconnectImpl(IVisualTreeElement vte, bool isRoot)
         {
             if (vte is not BindableObject bindableObject)
                 return;
@@ -71,7 +141,7 @@ public static class AutoDisconnectBehavior
                 return;
 
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
-                Disconnect(childElement, false);
+                DisconnectImpl(childElement, false);
 
             if (vte is VisualElement visualElement)
             {
@@ -119,7 +189,7 @@ public static class AutoDisconnectBehavior
                 if (element.Handler != null)
                 {
                     OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(element));
-                    
+
 #if IOS
                     // Fixes issue specific to ListView on iOS, where RealCell is not nulled out.
                     if (element is ViewCell && element.Handler.PlatformView is IDisposable disposablePlatformView)
@@ -131,6 +201,32 @@ public static class AutoDisconnectBehavior
                     element.Handler.DisconnectHandler();
                 }
             }
+        }
+    }
+
+    private static void OnNavigationPagePopped(object? sender, NavigationEventArgs e)
+    {
+        if (sender is not NavigationPage)
+            return;
+
+        Page? poppedPage = e.Page;
+        if (poppedPage == null)
+            return;
+
+        foreach (Tuple<WeakReference<VisualElement>, WeakReference<Page>> trackedElement in TrackedElements.ToArray())
+        {
+            if (!trackedElement.Item1.TryGetTarget(out VisualElement? visualElement) ||
+                !trackedElement.Item2.TryGetTarget(out Page? page))
+            {
+                TrackedElements.Remove(trackedElement);
+                continue;
+            }
+
+            if (page != poppedPage)
+                continue;
+
+            TrackedElements.Remove(trackedElement);
+            Disconnect(visualElement);
         }
     }
 
