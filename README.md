@@ -6,7 +6,7 @@ MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so inst
 
 - **Detects leaks** in MAUI views/pages, and notifies you when they occur at runtime.      
 - **Compartmentalizes & prevents _some_ leaks** by breaking apart pages and views when they're no longer needed.
-- **Prevents _some_ leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()`, `Dispose()`, and other conducting other targeted cleanup measures on view/page handlers.
+- **Prevents _some_ leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()`, `Dispose()`, and conducting other targeted cleanup measures on view/page handlers.
 
 # Understanding the Problem
 There are two core architectural issues behind MAUI's systemic memory problem.
