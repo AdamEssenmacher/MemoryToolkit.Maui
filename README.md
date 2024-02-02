@@ -1,8 +1,8 @@
 # Overview
 
-Anyone paying attention knows that MAUI leaks like a toddler's sippy cup. It's messy, gross, and feels helplessly unavoidable.
+MAUI leaks like a toddler's sippy cup. It's messy, gross, and helplessly unavoidable.
 
-MemoryToolkit.Maui assumes this is not a problem we can totally fix, and so instead aims to make this a problem we can at least manage. It offers three helpful features:
+MemoryToolkit.Maui offers three helpful features to help manage this problem:
 
 - **Detects leaks** in MAUI views/pages, and notifies you when they occur at runtime.      
 - **Compartmentalizes & prevents _some_ leaks** by breaking apart pages and views when they're no longer needed.
@@ -27,7 +27,7 @@ MemoryToolkit.Maui makes the _daring_ assumption that developers are usually 'do
 
 Out of the box, MemoryToolkit.Maui uses this definition to automatically apply leak monitoring, prevention, and compartmentalization features.
 
-This definition is likely incomplete (we probably need to consider things like Shell and tabbed pages...), but I think it's a good starting point. In cases where this definition doesn't apply (e.g. cached pages), MemoryToolkit.Maui still offers tools so developers can take direct control over monitoring and managing component lifecycles.
+This definition is likely incomplete (we probably need to consider things like nested modal navigation and tabbed pages), but I think it's a good starting point. In cases where this definition doesn't apply (e.g. cached pages), MemoryToolkit.Maui still offers tools so developers can take direct control over monitoring and managing component lifecycles.
 
 # How to use
 
