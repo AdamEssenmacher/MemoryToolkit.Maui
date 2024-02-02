@@ -75,8 +75,8 @@ public class GCCollectionMonitor : IGCCollectionMonitor
 
     public async Task MonitorAndForceCollectionAsync(List<GCCollectionItem> collectionItems)
     {
-        const int maxCollections = 20;
-        const int msBetweenCollections = 250;
+        const int maxCollections = 10;
+        const int msBetweenCollections = 200;
         var currentCollection = 0;
         
         while (++currentCollection <= maxCollections)
