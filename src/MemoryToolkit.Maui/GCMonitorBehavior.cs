@@ -61,7 +61,7 @@ public class GCMonitorBehavior
             visualElement.Unloaded -= OnVisualElementUnloaded;
     }
 
-    private static void OnVisualElementUnloaded(object? sender, EventArgs e)
+    private static async void OnVisualElementUnloaded(object? sender, EventArgs e)
     {
         if (sender is not VisualElement visualElement)
             return;
@@ -74,64 +74,64 @@ public class GCMonitorBehavior
         // OR if the navigation page itself isn't loaded.
 
         // Find the first parent element (or self) that is a Page. This is the containing or 'host' page.
-        Page? hostPage = null;
-        if (visualElement is Page self)
-        {
-            hostPage = self;
-        }
-        else
-        {
-            Element? parent = visualElement.Parent;
-            while (parent is not null)
-            {
-                if (parent is Page page)
-                {
-                    hostPage = page;
-                    break;
-                }
+        var hostPage = Utilities.GetFirstSelfOrParentOfType<Page>(visualElement);
 
-                parent = parent.Parent;
-            }
-        }
-
-        // If the host page is null, or its parent is not a navigation page,
-        // then we're outside the scope of a navigation page can Monitor immediately.
-        // 
-        // If there is a navigation page, but it's not loaded, then we can Monitor immediately.
-        if (hostPage?.Parent is not NavigationPage { IsLoaded: true } navigationPage)
+        // If the host page is null, we can Monitor immediately since there's no navigation context.
+        if (hostPage is null)
         {
             Monitor(visualElement);
             return;
         }
-
-        // If we make it to this point, then we're in the scope of a navigation page.
-        // This means that the Unloaded event could be firing because the page is being popped, or pushed over.
-        // We don't know which it is yet.
-        // As a page is being popped, it will still be in the navigation stack,
-        // so we need to wait until the Popped event is fired before we can check.
-        // The following approach temporarily keeps track of the visual element and its host page.
-        // We then subscribe to the Popped event of the navigation page and wait for it to fire.
-
-        // Don't monitor the same object more than once. This could happen, for example,
-        // if the tracked element is in a page that has been pushed over multiple times.
-        foreach (Tuple<WeakReference<VisualElement>, WeakReference<Page>> tuple in TrackedElements.ToArray())
-            if (tuple.Item1.TryGetTarget(out VisualElement? target) && target == visualElement)
+        
+        // Next, we need to determine if we're in a NavigationPage, or in Shell. These should be exclusive.
+        NavigationPage? navigationPage = Utilities.GetFirstSelfOrParentOfType<NavigationPage>(hostPage);
+        if (navigationPage != null)
+        {
+            if (!navigationPage.IsLoaded)
+            {
+                Monitor(visualElement);
                 return;
+            }
+            
+            // If we make it to this point, then we're in the scope of a navigation page.
+            // This means that the Unloaded event could be firing because the page is being popped, or pushed over.
+            // We don't know which it is yet.
+            // As a page is being popped, it will still be in the navigation stack,
+            // so we need to wait until the Popped event is fired before we can check.
+            // The following approach temporarily keeps track of the visual element and its host page.
+            // We then subscribe to the Popped event of the navigation page and wait for it to fire.
 
-        TrackedElements.Add(new Tuple<WeakReference<VisualElement>, WeakReference<Page>>(
-            new WeakReference<VisualElement>(visualElement), new WeakReference<Page>(hostPage)));
+            // Don't monitor the same object more than once. This could happen, for example,
+            // if the tracked element is in a page that has been pushed over multiple times.
+            foreach (Tuple<WeakReference<VisualElement>, WeakReference<Page>> tuple in TrackedElements.ToArray())
+                if (tuple.Item1.TryGetTarget(out VisualElement? target) && target == visualElement)
+                    return;
 
-        // Don't subscribe to the same navigation page more than once.
-        foreach (WeakReference<NavigationPage> navPageReference in TrackedNavigationPages.ToArray())
-            if (!navPageReference.TryGetTarget(out NavigationPage? target))
-                TrackedNavigationPages.Remove(navPageReference);
-            else if (target == navigationPage)
-                return;
+            TrackedElements.Add(new Tuple<WeakReference<VisualElement>, WeakReference<Page>>(
+                new WeakReference<VisualElement>(visualElement), new WeakReference<Page>(hostPage)));
 
-        // This shouldn't cause memory leaks since the handlers is static.
-        navigationPage.Popped += OnNavigationPagePopped;
-        TrackedNavigationPages.Add(new WeakReference<NavigationPage>(navigationPage));
+            // Don't subscribe to the same navigation page more than once.
+            foreach (WeakReference<NavigationPage> navPageReference in TrackedNavigationPages.ToArray())
+                if (!navPageReference.TryGetTarget(out NavigationPage? target))
+                    TrackedNavigationPages.Remove(navPageReference);
+                else if (target == navigationPage)
+                    return;
+
+            // This shouldn't cause memory leaks since the handlers is static.
+            navigationPage.Popped += OnNavigationPagePopped;
+            TrackedNavigationPages.Add(new WeakReference<NavigationPage>(navigationPage));
+
+            return;
+        }
+        
+        // If we're being popped, then the page will no longer have a Tab parent after a short delay
+        await Task.Delay(100);
+        var tab = Utilities.GetFirstSelfOrParentOfType<Tab>(hostPage);
+        if (tab == null)
+            Monitor(visualElement);
     }
+
+    private bool _firstPush = true;
 
     private static void Monitor(IVisualTreeElement visualTreeElement)
     {
