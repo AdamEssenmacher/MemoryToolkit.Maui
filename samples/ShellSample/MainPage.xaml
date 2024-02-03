@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:ShellSample"
+             xmlns:mtk="clr-namespace:MemoryToolkit.Maui;assembly=MemoryToolkit.Maui"
+             x:Class="ShellSample.MainPage"
+             Padding="10"
+             Title="Shell Sample"
+             mtk:GCMonitorBehavior.Cascade="True"
+             mtk:AutoDisconnectBehavior.Cascade="True">
+
+    <Grid RowDefinitions="Auto,*,1,Auto,20,Auto">
+        <VerticalStackLayout>
+            <Label x:Name="HeapSizeLabel"
+                   HorizontalTextAlignment="Center" />
+            <Label x:Name="LeakCountLabel"
+                   HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+        <Grid Grid.Row="1">
+            <ListView x:Name="ListView"
+                      RowHeight="150">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="local:ListItem">
+                        <ViewCell>
+                            <Border Margin="0,10"
+                                    StrokeShape="RoundRectangle 10">
+                                <Image Source="{Binding ImageUrl}"
+                                       Aspect="AspectFill" />
+                            </Border>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+        <!-- <BoxView BackgroundColor="Black" -->
+        <!--          Grid.Row="2"/> -->
+        <Button Grid.Row="3"
+                Text="Push"
+                Clicked="Push"
+                Margin="0,5,0,0"/>
+        <Button Grid.Row="5"
+                Text="Pop"
+                Clicked="Pop" />
+    </Grid>
+
+</ContentPage>

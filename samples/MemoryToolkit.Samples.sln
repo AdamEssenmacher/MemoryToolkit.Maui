@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MemoryToolkit.Maui", "..\src\MemoryToolkit.Maui\MemoryToolkit.Maui.csproj", "{19AFB2FB-C6BA-4ECA-ACB7-9311BA32B6D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShellSample", "ShellSample\ShellSample.csproj", "{98F4AD8A-3369-4B76-B498-96436B5AF5C0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{19AFB2FB-C6BA-4ECA-ACB7-9311BA32B6D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19AFB2FB-C6BA-4ECA-ACB7-9311BA32B6D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19AFB2FB-C6BA-4ECA-ACB7-9311BA32B6D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19AFB2FB-C6BA-4ECA-ACB7-9311BA32B6D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98F4AD8A-3369-4B76-B498-96436B5AF5C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98F4AD8A-3369-4B76-B498-96436B5AF5C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98F4AD8A-3369-4B76-B498-96436B5AF5C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98F4AD8A-3369-4B76-B498-96436B5AF5C0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
