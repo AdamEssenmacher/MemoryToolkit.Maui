@@ -8,7 +8,33 @@ MemoryToolkit.Maui offers three helpful features to help manage this problem:
 - **Compartmentalizes & prevents _some_ leaks** by breaking apart pages and views when they're no longer needed.
 - **Prevents _some_ leaks and ensures native resources are cleaned up** by automatically calling `DisconnectHandler()`, `Dispose()`, and conducting other targeted cleanup measures on view/page handlers.
 
-# Understanding the Problem
+# Sample Demonstration
+A sample MAUI project is included that demonstrates the severity of the issue, along with the toolkit's ability to detect and eliminate it. **The demonstration is meant to be run on iOS.**
+
+## Observing a Leak
+The sample is a Shell app with a simple page that shows a scrollable list of 100 random photos from https://picsum.photos. Two buttons allow you to either push a new instance of the page on the navigation stack, or pop the current page. The current (managed) heap size is also displayed:
+
+<img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/9d5c8a60-5bc8-4b2a-aec5-25826e412bd7" height="200">
+
+Right off the bat, the app consumes ~38 MB of managed memory. An empty MAUI app uses ~7-8MB (at least on iOS). The other 30 MB is artificial for the sake of demonstration. The `ListView`'s `ItemSource` property has been set to a collection of mocked-out 'view model' objects that each contain a 300KB byte array. Most view models probably won't be this big naturally, but it's definitely in the realm of possibility. Also, it's important to realize that the sample app is not reporting on memory used on the native side, which could easily be a couple 100 KB per item since we're showing images. The point here is that while the situation is contrived, it fairly demonstrates how available memory is quickly consumed by a MAUI app.
+
+To demonstrate a leak for yourself, push & pop the page a few times. Each time you push, you'll see that our heap size increases by ~30 MB. This is expected given our contrived design--we need each page to stay in memory so we can return to it later via the 'Pop' button. These actions simulate a user navigating to and away from pages in your app.
+
+After several push/pop cycles, the heap size will increase to several hundred MB. This is a _lot_ for a mobile app, and will eventually lead to the OS terminating it.
+
+## Detecting Individual Leaks
+You might have noticed in the previous test that the on-screen "Leaks Detected" counter remains at 0. This is because we haven't enabled the leak detection feature of the toolkit yet. Open `MainPage.xaml` and change the value of the attached property `mtk:GCMonitorBehavior.Cascade="False"` to 'True' and re-run your test. You'll notice that each time you push a new page, no new leaks are detected. However, each time you pop a page, several dozen leaks will be detected after a short delay (even more if you've scrolled around a bit).
+
+If you check out your debug output, you'll also see that each leaked Element / Handler has been logged as a warning:
+
+<img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/2765c2e3-075a-4426-bbb4-6135a9ff5dc4" height="400">
+
+## Fixing the Leaks
+Now for the ✨magic✨! Open `MainPage.xaml` again and change the value of the attached property `mtk:AutoDisconnectBehavior.Cascade="False"` to 'True'. Re-run your test, and you'll find that **0** leaks are detected. Event better: each time a page is popped, the memory it was using is reclaimed. You can push & pop all you want--the app will always return to its 'baseline' state of using ~38MB of managed memory.
+
+I suspect most devs will be curious about where the offending leak was, and how `AutoDisconnectBehavior` fixed it. There are actually a handful of leaks in this example. `ListView` leaks. `Border` leaks. Global styles leak. `ViewCell` leaks. There might even be more. `AutoDisconnectBehavior` applies a broad approach that seems to 'just work' most of the time. Read on for details.
+
+# Understanding the Underlying Problem
 There are two core architectural issues behind MAUI's systemic memory problem.
 
 ## Problem 1: Poor leak compartmentalization
