@@ -134,8 +134,6 @@ public class GCMonitorBehavior
             Monitor(visualElement);
     }
 
-    private bool _firstPush = true;
-
     private static void Monitor(IVisualTreeElement visualTreeElement)
     {
         List<GCCollectionItem> targets = new();
