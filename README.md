@@ -49,7 +49,7 @@ MemoryToolkit.Maui makes the _daring_ assumption that developers are usually 'do
 
 - The `Element`'s `Page` (or itself, if the `Element` is a `Page`) was just popped off the navigation stack.
 - The `Element` has been unloaded and is not (or no longer) hosted within a `Page` (e.g. a `ControlTemplate` that was just swapped out).
-- The `Element` is hosted within a `NavigationPage` that has been unloaded.
+- The `Element` is hosted within a `NavigationPage` that has been unloaded (this can be temporarily ignored; see the 'Advanced Use' section below).
 
 Out of the box, MemoryToolkit.Maui uses this definition to automatically apply leak monitoring, prevention, and compartmentalization features.
 
@@ -143,9 +143,25 @@ While quite effective, `AutoDisconnectBehavior.Cascade` is an extremely destruct
 #### Phase 3) Cleanup
 **The second edge:** After giving the platform handlers their chance to react to a now-empty view, `AutoDisconnectHandler` calls `Dispose()` (if applicable) and then `DisconnectHandler()` on the view's Handler. Other targeted cleanup measures are also applied to address known leaks in MAUI.
 
-#### Advanced Use: Custom deconstruction hook
+#### Advanced Use
 
+##### Custom Deconstruction Hook
 In some cases, known leaks may be worked around by whacking the control into a safe state when we're done with it. For example, an `SKLottieView` from SkiaSharp is known to leak as long as its `IsAnimationEnabled` property is True. The `AutoDisconnectBehavior` class offers a static event `OnDisconnectingHandler` that is invoked immediately before each call to `DisconnectHandler()`. You may use this hook to examine the view and change its state (for example, to set an `SKLottieView`'s `IsAnimationEnabled` property to 'false').
+
+##### Temporarily Unloaded NavigationPages
+There are a few common-enough scenarios where you'll expect a `NavigationPage` to be unloaded only temporarily. For example, calling `Browser.OpenAsync(..)`. In these cases, you can temporarily set the 'Suppress' properties on the `NavigationPage` itself, which will cause all behaviors within the page to be ignored. Here's an example handler method:
+```csharp
+private void OnTapped(object? sender, TappedEventArgs e)
+{
+    var navigationPage = Utilities.GetFirstSelfOrParentOfType<NavigationPage>(this);
+    if (navigationPage == null)
+        return;
+
+    GCMonitorBehavior.SetSuppress(navigationPage, true);
+    AutoDisconnectBehavior.SetSuppress(navigationPage, true);
+}
+```
+Be sure to set the 'Suppress' properties back to false later. The view's `Loaded` event is probably a good place for that.
 
 ## ControlTemplates
 A common use of the `ControlTemplate` is to change the appearance of a control at run time. For example, https://github.com/roubachof/Sharpnado.TaskLoaderView uses different control templates to show different views based on some loading state (e.g. loading, loaded, error). Whenever ControlTemplates are being used in this way, it's a good idea to use the above attached properties on a per-template basis.
