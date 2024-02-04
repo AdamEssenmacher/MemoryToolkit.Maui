@@ -89,6 +89,9 @@ public class GCMonitorBehavior
         {
             if (!navigationPage.IsLoaded)
             {
+                if (GetSuppress(navigationPage))
+                    return;
+                
                 Monitor(visualElement);
                 return;
             }
@@ -174,7 +177,10 @@ public class GCMonitorBehavior
 
     private static void OnNavigationPagePopped(object? sender, NavigationEventArgs e)
     {
-        if (sender is not NavigationPage)
+        if (sender is not NavigationPage navigationPage)
+            return;
+        
+        if(GetSuppress(navigationPage))
             return;
 
         Page? poppedPage = e.Page;

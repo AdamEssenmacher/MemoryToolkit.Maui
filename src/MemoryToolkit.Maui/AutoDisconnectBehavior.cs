@@ -82,6 +82,9 @@ public static class AutoDisconnectBehavior
         {
             if (!navigationPage.IsLoaded)
             {
+                if (GetSuppress(navigationPage))
+                    return;
+                
                 Disconnect(visualElement);
                 return;
             }
@@ -204,7 +207,10 @@ public static class AutoDisconnectBehavior
 
     private static void OnNavigationPagePopped(object? sender, NavigationEventArgs e)
     {
-        if (sender is not NavigationPage)
+        if (sender is not NavigationPage navigationPage)
+            return;
+
+        if (GetSuppress(navigationPage))
             return;
 
         Page? poppedPage = e.Page;
