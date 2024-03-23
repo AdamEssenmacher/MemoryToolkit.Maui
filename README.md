@@ -30,7 +30,7 @@ If you check out your debug output, you'll also see that each leaked Element / H
 <img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/2765c2e3-075a-4426-bbb4-6135a9ff5dc4" height="400">
 
 ## Fixing the Leaks
-Now for the ✨magic✨! Open `MainPage.xaml` again and change the value of the attached property `mtk:AutoDisconnectBehavior.Cascade="False"` to 'True'. Re-run your test, and you'll find that **0** leaks are detected. Event better: each time a page is popped, the memory it was using is reclaimed. You can push & pop all you want--the app will always return to its 'baseline' state of using ~38MB of managed memory.
+Now for the ✨magic✨! Open `MainPage.xaml` again and change the value of the attached property `mtk:AutoDisconnectBehavior.Cascade="False"` to 'True'. Re-run your test, and you'll find that **0** leaks are detected. Even better: each time a page is popped, the memory it was using is reclaimed. You can push & pop all you want--the app will always return to its 'baseline' state of using ~38MB of managed memory.
 
 I suspect most devs will be curious about where the offending leak was, and how `AutoDisconnectBehavior` fixed it. There are actually a handful of leaks in this example. `ListView` leaks. `Border` leaks. Global styles leak. `ViewCell` leaks. There might even be more. `AutoDisconnectBehavior` applies a broad approach that seems to 'just work' most of the time. Read on for details.
 
