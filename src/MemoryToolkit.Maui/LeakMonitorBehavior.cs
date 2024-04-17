@@ -58,7 +58,7 @@ public class LeakMonitorBehavior
     {
         if (view is not VisualElement visualElement)
             throw new InvalidOperationException(
-                "GCMonitorBehavior.Cascade can only be attached to a VisualElement");
+                $"{nameof(LeakMonitorBehavior)}.Cascade can only be attached to a VisualElement");
 
         var attachBehavior = (bool)newValue;
         if (attachBehavior)
