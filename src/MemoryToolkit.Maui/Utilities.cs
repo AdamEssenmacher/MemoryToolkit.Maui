@@ -72,7 +72,10 @@ public static class Utilities
 
             if (vte is VisualElement visualElement)
             {
-                // First, isolate the element. This will null out the binding context if it is inherited,
+                // First, clear the BindingContext
+                visualElement.BindingContext = null;
+                
+                // Next, isolate the element.
                 visualElement.Parent = null;
 
                 if (vte is ListView listView)
@@ -85,9 +88,6 @@ public static class Utilities
                     contentPage.Content = null;
                 else if (vte is ScrollView scrollView)
                     scrollView.Content = null;
-
-                // Next, clear the BindingContext (if it is not inherited)
-                visualElement.BindingContext = null;
 
                 visualElement.ClearLogicalChildren();
 
@@ -107,9 +107,9 @@ public static class Utilities
             }
             else if (vte is Element element)
             {
-                element.Parent = null;
-
                 element.BindingContext = null;
+                
+                element.Parent = null;
 
                 element.ClearLogicalChildren();
 
