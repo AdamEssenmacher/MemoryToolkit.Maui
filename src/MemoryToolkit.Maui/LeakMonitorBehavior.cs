@@ -2,21 +2,11 @@ namespace MemoryToolkit.Maui;
 
 public class LeakMonitorBehavior
 {
+    #region Bindable Properties
+
     public static readonly BindableProperty CascadeProperty =
         BindableProperty.CreateAttached("Cascade", typeof(bool), typeof(LeakMonitorBehavior), false,
             propertyChanged: CascadeChanged);
-
-    public static readonly BindableProperty SuppressProperty =
-        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(LeakMonitorBehavior), false);
-
-    public static readonly BindableProperty NameProperty =
-        BindableProperty.CreateAttached("Name", typeof(string), typeof(LeakMonitorBehavior), null);
-
-    // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
-    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();
-
-    // We also need to keep hold of navigation pages that we're subscribed to.
-    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = new();
 
     public static bool GetCascade(BindableObject view)
     {
@@ -28,6 +18,9 @@ public class LeakMonitorBehavior
         view.SetValue(CascadeProperty, value);
     }
 
+    public static readonly BindableProperty SuppressProperty =
+        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(LeakMonitorBehavior), false);
+
     public static bool GetSuppress(BindableObject view)
     {
         return (bool)view.GetValue(SuppressProperty);
@@ -38,6 +31,9 @@ public class LeakMonitorBehavior
         view.SetValue(SuppressProperty, value);
     }
 
+    public static readonly BindableProperty NameProperty =
+        BindableProperty.CreateAttached("Name", typeof(string), typeof(LeakMonitorBehavior), null);
+
     public static string GetName(BindableObject view)
     {
         return (string)view.GetValue(NameProperty);
@@ -47,6 +43,14 @@ public class LeakMonitorBehavior
     {
         view.SetValue(NameProperty, value);
     }
+
+    #endregion
+
+    // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
+    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();
+
+    // We also need to keep hold of navigation pages that we're subscribed to.
+    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = new();
 
     private static void CascadeChanged(BindableObject view, object oldValue, object newValue)
     {
