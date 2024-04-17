@@ -4,51 +4,11 @@ namespace MemoryToolkit.Maui;
 
 public class LeakMonitorBehavior
 {
-    #region Bindable Properties
-
+    // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
     public static readonly BindableProperty CascadeProperty =
         BindableProperty.CreateAttached("Cascade", typeof(bool), typeof(LeakMonitorBehavior), false,
             propertyChanged: CascadeChanged);
 
-    public static bool GetCascade(BindableObject view)
-    {
-        return (bool)view.GetValue(CascadeProperty);
-    }
-
-    public static void SetCascade(BindableObject view, bool value)
-    {
-        view.SetValue(CascadeProperty, value);
-    }
-
-    public static readonly BindableProperty SuppressProperty =
-        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(LeakMonitorBehavior), false);
-
-    public static bool GetSuppress(BindableObject view)
-    {
-        return (bool)view.GetValue(SuppressProperty);
-    }
-
-    public static void SetSuppress(BindableObject view, bool value)
-    {
-        view.SetValue(SuppressProperty, value);
-    }
-
-    public static readonly BindableProperty NameProperty =
-        BindableProperty.CreateAttached("Name", typeof(string), typeof(LeakMonitorBehavior), null);
-
-    public static string GetName(BindableObject view)
-    {
-        return (string)view.GetValue(NameProperty);
-    }
-
-    public static void SetName(BindableObject view, string value)
-    {
-        view.SetValue(NameProperty, value);
-    }
-
-    #endregion
-
-    // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
     private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = [];
 
     // We also need to keep hold of navigation pages that we're subscribed to.
@@ -88,10 +48,10 @@ public class LeakMonitorBehavior
             visualElement.Monitor();
             return;
         }
-        
+
         // Since we are in a host page, we next need to determine if we're in a NavigationPage, in Shell, or neither.
         // These should be exclusive.
-        NavigationPage? navigationPage = Utilities.GetFirstSelfOrParentOfType<NavigationPage>(hostPage);
+        var navigationPage = Utilities.GetFirstSelfOrParentOfType<NavigationPage>(hostPage);
         if (navigationPage != null)
         {
             // If we're in a NavigationPage, and the NavigationPage is not loaded, then we can Monitor immediately.
@@ -100,11 +60,11 @@ public class LeakMonitorBehavior
                 // ...unless Suppress is set.
                 if (GetSuppress(navigationPage))
                     return;
-                
+
                 visualElement.Monitor();
                 return;
             }
-            
+
             // If we make it to this point, then we're in the scope of a navigation page that is still loaded.
             // This means that the Unloaded event could be firing because the page is being popped, or pushed over.
             // We don't know which it is yet.
@@ -135,7 +95,7 @@ public class LeakMonitorBehavior
 
             return;
         }
-        
+
         // I don't know if there's a cleaner way to do this in Shell.
         // If we're being popped, then the page will no longer have a Tab parent after a short delay
         await Task.Delay(100);
@@ -148,8 +108,8 @@ public class LeakMonitorBehavior
     {
         if (sender is not NavigationPage navigationPage)
             return;
-        
-        if(GetSuppress(navigationPage))
+
+        if (GetSuppress(navigationPage))
             return;
 
         Page? poppedPage = e.Page;
@@ -172,4 +132,44 @@ public class LeakMonitorBehavior
             visualElement.Monitor();
         }
     }
+
+    #region Bindable Properties
+
+    public static bool GetCascade(BindableObject view)
+    {
+        return (bool)view.GetValue(CascadeProperty);
+    }
+
+    public static void SetCascade(BindableObject view, bool value)
+    {
+        view.SetValue(CascadeProperty, value);
+    }
+
+    public static readonly BindableProperty SuppressProperty =
+        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(LeakMonitorBehavior), false);
+
+    public static bool GetSuppress(BindableObject view)
+    {
+        return (bool)view.GetValue(SuppressProperty);
+    }
+
+    public static void SetSuppress(BindableObject view, bool value)
+    {
+        view.SetValue(SuppressProperty, value);
+    }
+
+    public static readonly BindableProperty NameProperty =
+        BindableProperty.CreateAttached("Name", typeof(string), typeof(LeakMonitorBehavior), null);
+
+    public static string GetName(BindableObject view)
+    {
+        return (string)view.GetValue(NameProperty);
+    }
+
+    public static void SetName(BindableObject view, string value)
+    {
+        view.SetValue(NameProperty, value);
+    }
+
+    #endregion
 }

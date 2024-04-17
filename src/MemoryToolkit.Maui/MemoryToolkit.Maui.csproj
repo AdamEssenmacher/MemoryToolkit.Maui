@@ -5,9 +5,26 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+    
+    <PropertyGroup>
+        <PackageId>AdamE.MemoryToolkit.Maui</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>adamessenmacher</Authors>
+        <Description>A developer toolkit for detecting, diagnosing, and mitigating memory leaks in .NET MAUI applications.</Description>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/AdamEssenmacher/MemoryToolkit.Maui</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/AdamEssenmacher/MemoryToolkit.Maui</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <Copyright>© 2024 Adam Essenmacher.</Copyright>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.3"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\..\README.md" Pack="true" Link="README.md" PackagePath="\" />
     </ItemGroup>
 
 </Project>

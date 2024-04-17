@@ -18,14 +18,14 @@ public static class Utilities
 
         return null;
     }
-    
+
     public static void Monitor(this IVisualTreeElement visualTreeElement)
     {
-        List<GCCollectionItem> collectionTargets = [];
+        List<CollectionTarget> collectionTargets = [];
 
         MonitorImpl(visualTreeElement, true);
 
-        GCCollectionMonitor.Instance.MonitorAndForceCollectionAsync(collectionTargets);
+        GarbageCollectionMonitor.Instance.MonitorAndForceCollectionAsync(collectionTargets);
 
         return;
 
@@ -35,29 +35,22 @@ public static class Utilities
                 return;
 
             // Suppress is self-explanatory. Cascade means it's already monitored, so no reason to double up.
-            if (LeakMonitorBehavior.GetSuppress(bindableObject) || (!isRoot && LeakMonitorBehavior.GetCascade(bindableObject)))
+            if (LeakMonitorBehavior.GetSuppress(bindableObject) ||
+                (!isRoot && LeakMonitorBehavior.GetCascade(bindableObject)))
                 return;
 
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
                 MonitorImpl(childElement, false);
 
-            Action<GCCollectionItem>? onLeaked = null;
-            Action<GCCollectionItem>? onCollected = null;
-            if (Application.Current is GCMonitoredApplication gcMonitoredApplication)
-            {
-                onLeaked = gcMonitoredApplication.OnLeaked;
-                onCollected = gcMonitoredApplication.OnCollected;
-            }
-
-            collectionTargets.Add(new GCCollectionItem(vte, LeakMonitorBehavior.GetName(bindableObject), onLeaked, onCollected));
+            collectionTargets.Add(new CollectionTarget(vte, LeakMonitorBehavior.GetName(bindableObject)));
 
             if (vte is VisualElement { Handler: not null } visualElement)
-                collectionTargets.Add(new GCCollectionItem(visualElement.Handler, null, onLeaked, onCollected));
+                collectionTargets.Add(new CollectionTarget(visualElement.Handler));
             else if (vte is Element { Handler: not null } element)
-                collectionTargets.Add(new GCCollectionItem(element.Handler, null, onLeaked, onCollected));
+                collectionTargets.Add(new CollectionTarget(element.Handler));
         }
     }
-    
+
     public static void TearDown(this IVisualTreeElement vte)
     {
         TearDownImpl(vte, true);
@@ -69,7 +62,9 @@ public static class Utilities
             if (vte is not BindableObject bindableObject)
                 return;
 
-            if (TearDownBehavior.GetSuppress(bindableObject) || (!isRoot && TearDownBehavior.GetCascade(bindableObject)))
+            // Suppress is self-explanatory. Cascade means it's already set for tear down, so no reason to double up.
+            if (TearDownBehavior.GetSuppress(bindableObject) ||
+                (!isRoot && TearDownBehavior.GetCascade(bindableObject)))
                 return;
 
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())

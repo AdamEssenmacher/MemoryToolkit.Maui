@@ -12,7 +12,7 @@ public partial class MainPage
         InitializeComponent();
 
         ListView.ItemsSource = Enumerable.Range(1, 100)
-            .Select(_ => new ListItem { ImageUrl =$"https://picsum.photos/seed/{_random.Next(1000)}/640/360"})
+            .Select(_ => new ListItem { ImageUrl = $"https://picsum.photos/seed/{_random.Next(1000)}/640/360" })
             .ToImmutableArray();
 
         Dispatcher.StartTimer(TimeSpan.FromSeconds(0.7), () =>
@@ -27,7 +27,7 @@ public partial class MainPage
         double heapSize = GC.GetTotalMemory(false)
                           / 1024d;
 
-        LeakCountLabel.Text = $"Leaks Detected: {((CustomGCMonitoredApp)Application.Current).LeaksDetected}";
+        LeakCountLabel.Text = $"Leaks Detected: {((App)Application.Current!).LeaksDetected}";
         HeapSizeLabel.Text = $"Heap Size: {heapSize:n2} KB";
     }
 

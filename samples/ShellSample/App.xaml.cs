@@ -1,13 +1,13 @@
-using Microsoft.Extensions.Logging;
-
 namespace ShellSample;
 
 public partial class App
 {
-    public App(ILogger<App> logger) : base(logger)
+    public App()
     {
         InitializeComponent();
 
         MainPage = new AppShell();
     }
+
+    public int LeaksDetected { get; set; }
 }
