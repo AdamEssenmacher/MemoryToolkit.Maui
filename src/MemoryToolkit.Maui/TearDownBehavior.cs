@@ -4,20 +4,11 @@ namespace MemoryToolkit.Maui;
 
 public static class TearDownBehavior
 {
+    #region Bindable Properties
+
     public static readonly BindableProperty CascadeProperty =
         BindableProperty.CreateAttached("Cascade", typeof(bool), typeof(TearDownBehavior), false,
             propertyChanged: CascadeChanged);
-
-    public static readonly BindableProperty SuppressProperty =
-        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(TearDownBehavior), false);
-
-    // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
-    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();
-
-    // We also need to keep hold of navigation pages that we're subscribed to.
-    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = new();
-    
-    public static Action<object>? OnTearDown { get; set; }
 
     public static bool GetCascade(BindableObject view)
     {
@@ -29,6 +20,9 @@ public static class TearDownBehavior
         view.SetValue(CascadeProperty, value);
     }
 
+    public static readonly BindableProperty SuppressProperty =
+        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(TearDownBehavior), false);
+
     public static bool GetSuppress(BindableObject view)
     {
         return (bool)view.GetValue(SuppressProperty);
@@ -38,6 +32,16 @@ public static class TearDownBehavior
     {
         view.SetValue(SuppressProperty, value);
     }
+
+    #endregion
+
+    // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
+    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();
+
+    // We also need to keep hold of navigation pages that we're subscribed to.
+    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = new();
+    
+    public static Action<object>? OnTearDown { get; set; }
 
     private static void CascadeChanged(BindableObject view, object oldValue, object newValue)
     {
