@@ -85,7 +85,7 @@ public class LeakMonitorBehavior
         // If the host page is null, we can Monitor immediately since there's no navigation context.
         if (hostPage is null)
         {
-            Monitor(visualElement);
+            visualElement.Monitor();
             return;
         }
         
@@ -101,7 +101,7 @@ public class LeakMonitorBehavior
                 if (GetSuppress(navigationPage))
                     return;
                 
-                Monitor(visualElement);
+                visualElement.Monitor();
                 return;
             }
             
@@ -141,46 +141,7 @@ public class LeakMonitorBehavior
         await Task.Delay(100);
         var tab = Utilities.GetFirstSelfOrParentOfType<Tab>(hostPage);
         if (tab == null)
-            Monitor(visualElement);
-    }
-
-    private static void Monitor(IVisualTreeElement visualTreeElement)
-    {
-        List<GCCollectionItem> targets = new();
-
-        MonitorImpl(visualTreeElement, true);
-
-        GCCollectionMonitor.Instance.MonitorAndForceCollectionAsync(targets);
-
-        return;
-
-        void MonitorImpl(IVisualTreeElement vte, bool isRoot)
-        {
-            if (vte is not BindableObject bindableObject)
-                return;
-
-            // Suppress is self-explanatory. Cascade means it's already monitored, so no reason to double up.
-            if (GetSuppress(bindableObject) || (!isRoot && GetCascade(bindableObject)))
-                return;
-
-            foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
-                MonitorImpl(childElement, false);
-
-            Action<GCCollectionItem>? onLeaked = null;
-            Action<GCCollectionItem>? onCollected = null;
-            if (Application.Current is GCMonitoredApplication gcMonitoredApplication)
-            {
-                onLeaked = gcMonitoredApplication.OnLeaked;
-                onCollected = gcMonitoredApplication.OnCollected;
-            }
-
-            targets.Add(new GCCollectionItem(vte, GetName(bindableObject), onLeaked, onCollected));
-
-            if (vte is VisualElement { Handler: not null } visualElement)
-                targets.Add(new GCCollectionItem(visualElement.Handler, null, onLeaked, onCollected));
-            else if (vte is Element { Handler: not null } element)
-                targets.Add(new GCCollectionItem(element.Handler, null, onLeaked, onCollected));
-        }
+            visualElement.Monitor();
     }
 
     private static void OnNavigationPagePopped(object? sender, NavigationEventArgs e)
@@ -208,7 +169,7 @@ public class LeakMonitorBehavior
                 continue;
 
             TrackedElements.Remove(trackedElement);
-            Monitor(visualElement);
+            visualElement.Monitor();
         }
     }
 }
