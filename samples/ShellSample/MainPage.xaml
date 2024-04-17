@@ -7,8 +7,8 @@
              x:Class="ShellSample.MainPage"
              Padding="10"
              Title="Shell Sample"
-             mtk:GCMonitorBehavior.Cascade="True"
-             mtk:AutoDisconnectBehavior.Cascade="True">
+             mtk:LeakMonitorBehavior.Cascade="True"
+             mtk:TearDownBehavior.Cascade="True">
 
     <Grid RowDefinitions="Auto,*,1,Auto,20,Auto">
         <VerticalStackLayout>

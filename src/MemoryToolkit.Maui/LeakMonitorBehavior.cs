@@ -1,16 +1,16 @@
 namespace MemoryToolkit.Maui;
 
-public class GCMonitorBehavior
+public class LeakMonitorBehavior
 {
     public static readonly BindableProperty CascadeProperty =
-        BindableProperty.CreateAttached("Cascade", typeof(bool), typeof(GCMonitorBehavior), false,
+        BindableProperty.CreateAttached("Cascade", typeof(bool), typeof(LeakMonitorBehavior), false,
             propertyChanged: CascadeChanged);
 
     public static readonly BindableProperty SuppressProperty =
-        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(GCMonitorBehavior), false);
+        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(LeakMonitorBehavior), false);
 
     public static readonly BindableProperty NameProperty =
-        BindableProperty.CreateAttached("Name", typeof(string), typeof(GCMonitorBehavior), null);
+        BindableProperty.CreateAttached("Name", typeof(string), typeof(LeakMonitorBehavior), null);
 
     // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
     private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();

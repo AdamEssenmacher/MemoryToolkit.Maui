@@ -2,14 +2,14 @@
 
 namespace MemoryToolkit.Maui;
 
-public static class AutoDisconnectBehavior
+public static class TearDownBehavior
 {
     public static readonly BindableProperty CascadeProperty =
-        BindableProperty.CreateAttached("Cascade", typeof(bool), typeof(AutoDisconnectBehavior), false,
+        BindableProperty.CreateAttached("Cascade", typeof(bool), typeof(TearDownBehavior), false,
             propertyChanged: CascadeChanged);
 
     public static readonly BindableProperty SuppressProperty =
-        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(AutoDisconnectBehavior), false);
+        BindableProperty.CreateAttached("Suppress", typeof(bool), typeof(TearDownBehavior), false);
 
     // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
     private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();
