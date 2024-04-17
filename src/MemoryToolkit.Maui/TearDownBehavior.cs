@@ -45,7 +45,7 @@ public static class TearDownBehavior
     {
         if (view is not VisualElement visualElement)
             throw new InvalidOperationException(
-                "AutoDisconnectBehavior.Cascade can only be attached to a VisualElement");
+                $"{nameof(TearDownBehavior)}.Cascade can only be attached to a VisualElement");
 
         var attachBehavior = (bool)newValue;
         if (attachBehavior)
