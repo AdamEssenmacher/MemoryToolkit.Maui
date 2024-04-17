@@ -1,3 +1,5 @@
+// ReSharper disable MemberCanBePrivate.Global
+
 namespace MemoryToolkit.Maui;
 
 public class LeakMonitorBehavior
