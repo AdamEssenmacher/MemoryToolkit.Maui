@@ -78,12 +78,15 @@ public static class TearDownBehavior
             return;
         }
 
-        // Next, we need to determine if we're in a NavigationPage, or in Shell. These should be exclusive.
+        // Since we are in a host page, we next need to determine if we're in a NavigationPage, in Shell, or neither.
+        // These should be exclusive.
         var navigationPage = Utilities.GetFirstSelfOrParentOfType<NavigationPage>(hostPage);
         if (navigationPage != null)
         {
+            // If we're in a NavigationPage, and the NavigationPage is not loaded, then we can TearDown immediately.
             if (!navigationPage.IsLoaded)
             {
+                // ...unless Suppress is set.
                 if (GetSuppress(navigationPage))
                     return;
 
@@ -91,7 +94,7 @@ public static class TearDownBehavior
                 return;
             }
 
-            // If we make it to this point, then we're in the scope of a navigation page.
+            // If we make it to this point, then we're in the scope of a navigation page that is still loaded.
             // This means that the Unloaded event could be firing because the page is being popped, or pushed over.
             // We don't know which it is yet.
             // As a page is being popped, it will still be in the navigation stack,
@@ -122,6 +125,7 @@ public static class TearDownBehavior
             return;
         }
 
+        // I don't know if there's a cleaner way to do this in Shell.
         // If we're being popped, then the page will no longer have a Tab parent after a short delay
         await Task.Delay(100);
         var tab = Utilities.GetFirstSelfOrParentOfType<Tab>(hostPage);
