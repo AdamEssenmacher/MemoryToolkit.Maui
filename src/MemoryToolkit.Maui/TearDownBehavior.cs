@@ -16,10 +16,8 @@ public static class TearDownBehavior
 
     // We also need to keep hold of navigation pages that we're subscribed to.
     private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = new();
-
-#pragma warning disable CS0067 // Event is never used
-    public static event EventHandler<DisconnectingHandlerEventArgs>? OnDisconnectingHandler;
-#pragma warning restore CS0067 // Event is never used
+    
+    public static Action<object>? OnTearDown { get; set; }
 
     public static bool GetCascade(BindableObject view)
     {
@@ -171,7 +169,7 @@ public static class TearDownBehavior
                 // The _last_ thing we want to do is disconnect the handler.
                 if (visualElement.Handler != null)
                 {
-                    OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(visualElement));
+                    OnTearDown?.Invoke(visualElement);
                     if (visualElement.Handler is IDisposable disposableHandler)
                         disposableHandler.Dispose();
                     visualElement.Handler?.DisconnectHandler();
@@ -189,7 +187,7 @@ public static class TearDownBehavior
 
                 if (element.Handler != null)
                 {
-                    OnDisconnectingHandler?.Invoke(null, new DisconnectingHandlerEventArgs(element));
+                    OnTearDown?.Invoke(element);
 
 #if IOS
                     // Fixes issue specific to ListView on iOS, where RealCell is not nulled out.
@@ -232,15 +230,5 @@ public static class TearDownBehavior
             TrackedElements.Remove(trackedElement);
             Disconnect(visualElement);
         }
-    }
-
-    public class DisconnectingHandlerEventArgs : EventArgs
-    {
-        public DisconnectingHandlerEventArgs(object element)
-        {
-            Element = element;
-        }
-
-        public object Element { get; }
     }
 }
