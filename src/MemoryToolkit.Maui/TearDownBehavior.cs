@@ -70,7 +70,7 @@ public static class TearDownBehavior
         // If the host page is null, we can Disconnect immediately since there's no navigation context.
         if (hostPage is null)
         {
-            Disconnect(visualElement);
+            visualElement.TearDown();
             return;
         }
 
@@ -82,8 +82,8 @@ public static class TearDownBehavior
             {
                 if (GetSuppress(navigationPage))
                     return;
-                
-                Disconnect(visualElement);
+
+                visualElement.TearDown();
                 return;
             }
 
@@ -122,85 +122,7 @@ public static class TearDownBehavior
         await Task.Delay(100);
         var tab = Utilities.GetFirstSelfOrParentOfType<Tab>(hostPage);
         if (tab == null)
-            Disconnect(visualElement);
-    }
-
-    private static void Disconnect(IVisualTreeElement vte)
-    {
-        DisconnectImpl(vte, true);
-
-        return;
-
-        void DisconnectImpl(IVisualTreeElement vte, bool isRoot)
-        {
-            if (vte is not BindableObject bindableObject)
-                return;
-
-            if (GetSuppress(bindableObject) || (!isRoot && GetCascade(bindableObject)))
-                return;
-
-            foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
-                DisconnectImpl(childElement, false);
-
-            if (vte is VisualElement visualElement)
-            {
-                // First, isolate the element. This will null out the binding context if it is inherited,
-                visualElement.Parent = null;
-
-                if (vte is ListView listView)
-                    listView.ItemsSource = null;
-                else if (vte is ContentView contentView)
-                    contentView.Content = null;
-                else if (vte is Border border)
-                    border.Content = null;
-                else if (vte is ContentPage contentPage)
-                    contentPage.Content = null;
-                else if (vte is ScrollView scrollView)
-                    scrollView.Content = null;
-
-                // Next, clear the BindingContext (if it is not inherited)
-                visualElement.BindingContext = null;
-
-                visualElement.ClearLogicalChildren();
-
-                // With the binding context cleared, and the element isolated, it has a chance to revert itself
-                // to a 'default' state.
-
-                // The _last_ thing we want to do is disconnect the handler.
-                if (visualElement.Handler != null)
-                {
-                    OnTearDown?.Invoke(visualElement);
-                    if (visualElement.Handler is IDisposable disposableHandler)
-                        disposableHandler.Dispose();
-                    visualElement.Handler?.DisconnectHandler();
-                }
-
-                visualElement.Resources = null;
-            }
-            else if (vte is Element element)
-            {
-                element.Parent = null;
-
-                element.BindingContext = null;
-
-                element.ClearLogicalChildren();
-
-                if (element.Handler != null)
-                {
-                    OnTearDown?.Invoke(element);
-
-#if IOS
-                    // Fixes issue specific to ListView on iOS, where RealCell is not nulled out.
-                    if (element is ViewCell && element.Handler.PlatformView is IDisposable disposablePlatformView)
-                        disposablePlatformView.Dispose();
-#endif
-
-                    if (element.Handler is IDisposable disposableElementHandler)
-                        disposableElementHandler.Dispose();
-                    element.Handler.DisconnectHandler();
-                }
-            }
-        }
+            visualElement.TearDown();
     }
 
     private static void OnNavigationPagePopped(object? sender, NavigationEventArgs e)
@@ -228,7 +150,7 @@ public static class TearDownBehavior
                 continue;
 
             TrackedElements.Remove(trackedElement);
-            Disconnect(visualElement);
+            visualElement.TearDown();
         }
     }
 }
