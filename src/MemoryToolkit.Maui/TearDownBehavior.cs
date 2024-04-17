@@ -36,10 +36,10 @@ public static class TearDownBehavior
     #endregion
 
     // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
-    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();
+    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = [];
 
     // We also need to keep hold of navigation pages that we're subscribed to.
-    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = new();
+    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = [];
     
     public static Action<object>? OnTearDown { get; set; }
 

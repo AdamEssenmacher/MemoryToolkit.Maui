@@ -49,10 +49,10 @@ public class LeakMonitorBehavior
     #endregion
 
     // We need to keep hold of our monitored elements that were in a navigation page until the page is popped.
-    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = new();
+    private static readonly List<Tuple<WeakReference<VisualElement>, WeakReference<Page>>> TrackedElements = [];
 
     // We also need to keep hold of navigation pages that we're subscribed to.
-    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = new();
+    private static readonly List<WeakReference<NavigationPage>> TrackedNavigationPages = [];
 
     private static void CascadeChanged(BindableObject view, object oldValue, object newValue)
     {
