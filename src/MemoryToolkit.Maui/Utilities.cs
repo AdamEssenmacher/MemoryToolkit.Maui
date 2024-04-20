@@ -19,7 +19,7 @@ public static class Utilities
         return null;
     }
 
-    public static void Monitor(this IVisualTreeElement visualTreeElement)
+    public static void Monitor(this object visualTreeElement)
     {
         List<CollectionTarget> collectionTargets = [];
 
@@ -29,25 +29,35 @@ public static class Utilities
 
         return;
 
-        void MonitorImpl(IVisualTreeElement vte, bool isRoot)
+        void MonitorImpl(object monitorTarget, bool isRoot)
         {
-            if (vte is not BindableObject bindableObject)
-                return;
+            if (monitorTarget is IVisualTreeElement vte)
+            {
+                string? targetName = null;
+                if (vte is BindableObject bindableObject)
+                {
+                    // Suppress is self-explanatory. Cascade means it's already monitored, so no reason to double up.
+                    if (LeakMonitorBehavior.GetSuppress(bindableObject) ||
+                        (!isRoot && LeakMonitorBehavior.GetCascade(bindableObject)))
+                        return;
+                    
+                    targetName = LeakMonitorBehavior.GetName(bindableObject);
+                }
 
-            // Suppress is self-explanatory. Cascade means it's already monitored, so no reason to double up.
-            if (LeakMonitorBehavior.GetSuppress(bindableObject) ||
-                (!isRoot && LeakMonitorBehavior.GetCascade(bindableObject)))
-                return;
+                foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
+                    MonitorImpl(childElement, false);
 
-            foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
-                MonitorImpl(childElement, false);
+                collectionTargets.Add(new CollectionTarget(vte, targetName));
 
-            collectionTargets.Add(new CollectionTarget(vte, LeakMonitorBehavior.GetName(bindableObject)));
-
-            if (vte is VisualElement { Handler: not null } visualElement)
-                collectionTargets.Add(new CollectionTarget(visualElement.Handler));
-            else if (vte is Element { Handler: not null } element)
-                collectionTargets.Add(new CollectionTarget(element.Handler));
+                if (vte is VisualElement { Handler: not null } visualElement)
+                    collectionTargets.Add(new CollectionTarget(visualElement.Handler));
+                else if (vte is Element { Handler: not null } element)
+                    collectionTargets.Add(new CollectionTarget(element.Handler));
+            }
+            else
+            {
+                collectionTargets.Add(new CollectionTarget(monitorTarget));
+            }
         }
     }
 
