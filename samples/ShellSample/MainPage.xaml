@@ -16,6 +16,8 @@
                    HorizontalTextAlignment="Center" />
             <Label x:Name="LeakCountLabel"
                    HorizontalTextAlignment="Center" />
+            <local:LeakyLabel Text="The Label that you're currently reading intentionally leaks memory. Its purpose here is to demonstrate that without TearDownBehavior.Cascade, this single leaky label would cause the entire page, everything in it, and associated BindingContexts to leak too. With TearDownBehavior.Cascade, the leak is contained to just this label, which has a negligible practical impact on memory consumption."
+                              HorizontalTextAlignment="Center" />
         </VerticalStackLayout>
         <Grid Grid.Row="1">
             <ListView x:Name="ListView"
