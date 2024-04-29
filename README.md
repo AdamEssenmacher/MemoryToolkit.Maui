@@ -8,6 +8,8 @@ MemoryToolkit.Maui offers three primary features to help manage this problem:
 - **Prevents certain classes of leaks** by automatically applying certain tear down measures.
 - **Compartmentalizes leaks** by breaking apart the visual tree, ensuring small leaks do not grow to consume their host pages.
 
+If this project saves you time, money, or sanity, please consider [sponsoring me here on GitHub :heart:](https://github.com/sponsors/AdamEssenmacher)
+
 # Quick Start
 ## Install
 
