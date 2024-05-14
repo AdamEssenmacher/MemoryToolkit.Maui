@@ -79,6 +79,12 @@ public static class Utilities
 
             foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
                 TearDownImpl(childElement, false);
+            
+            if (vte is Page page)
+            {
+                foreach (var toolbarItem in page.ToolbarItems)
+                    TearDownImpl(toolbarItem, false);
+            }
 
             if (vte is VisualElement visualElement)
             {
