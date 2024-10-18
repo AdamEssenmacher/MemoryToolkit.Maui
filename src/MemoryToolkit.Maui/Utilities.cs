@@ -109,7 +109,17 @@ public static class Utilities
                 {
                     TearDownBehavior.OnTearDown?.Invoke(visualElement);
                     if (visualElement.Handler is IDisposable disposableHandler)
-                        disposableHandler.Dispose();
+                    {
+                        try
+                        {
+                            disposableHandler.Dispose();
+                        }
+                        catch(ObjectDisposedException ex)
+                        {
+
+                        }
+                    }
+                       
                     visualElement.Handler?.DisconnectHandler();
                 }
 
@@ -134,7 +144,16 @@ public static class Utilities
 #endif
 
                     if (element.Handler is IDisposable disposableElementHandler)
-                        disposableElementHandler.Dispose();
+                    {
+                        try
+                        {
+                            disposableElementHandler.Dispose();
+                        }
+                        catch (ObjectDisposedException ex)
+                        {
+
+                        }
+                    }
                     element.Handler.DisconnectHandler();
                 }
             }
