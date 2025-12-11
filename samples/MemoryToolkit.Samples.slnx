@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../src/MemoryToolkit.Maui/MemoryToolkit.Maui.csproj" />
+  <Project Path="ShellSample/ShellSample.csproj" />
+</Solution>
