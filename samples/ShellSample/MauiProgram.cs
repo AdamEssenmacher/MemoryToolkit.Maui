@@ -21,8 +21,11 @@ public static class MauiProgram
         
         builder.UseLeakDetection(collectionTarget =>
         {
-            Application.Current?.MainPage?.DisplayAlert("💦Leak Detected💦",
-                $"❗🧟❗{collectionTarget.Name} is a zombie!", "OK");
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Application.Current?.MainPage?.DisplayAlertAsync("💦Leak Detected💦",
+                    $"❗🧟❗{collectionTarget.Name} is a zombie!", "OK");
+            });
 
             ((App)Application.Current!).LeaksDetected++;
         });
