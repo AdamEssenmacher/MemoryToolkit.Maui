@@ -20,20 +20,22 @@
                               HorizontalTextAlignment="Center" />
         </VerticalStackLayout>
         <Grid Grid.Row="1">
-            <ListView x:Name="ListView"
-                      RowHeight="150">
-                <ListView.ItemTemplate>
+            <CollectionView x:Name="ListView"
+                            SelectionMode="None">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="local:ListItem">
-                        <ViewCell>
-                            <Border Margin="0,10"
-                                    StrokeShape="RoundRectangle 10">
-                                <Image Source="{Binding ImageUrl}"
-                                       Aspect="AspectFill" />
-                            </Border>
-                        </ViewCell>
+                        <Border Margin="0,10"
+                                StrokeShape="RoundRectangle 10"
+                                HeightRequest="150">
+                            <Image Source="{Binding ImageUrl}"
+                                   Aspect="AspectFill" />
+                        </Border>
                     </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </Grid>
         <!-- <BoxView BackgroundColor="Black" -->
         <!--          Grid.Row="2"/> -->
