@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Maui;
+
 namespace MemoryToolkit.Maui;
 
 public static class Utilities
@@ -63,13 +66,21 @@ public static class Utilities
 
     public static void TearDown(this IVisualTreeElement vte)
     {
-        TearDownImpl(vte, true);
+        vte.TearDown(MemoryToolkitConfiguration.Options.DefaultTearDownStrategy);
+    }
+
+    public static void TearDown(this IVisualTreeElement vte, TearDownStrategy strategy)
+    {
+        if (strategy == TearDownStrategy.DetectOnly)
+            return;
+
+        TearDownImpl(vte, true, strategy);
 
         return;
 
-        void TearDownImpl(IVisualTreeElement vte, bool isRoot)
+        void TearDownImpl(IVisualTreeElement current, bool isRoot, TearDownStrategy strategy)
         {
-            if (vte is not BindableObject bindableObject)
+            if (current is not BindableObject bindableObject)
                 return;
 
             // Suppress is self-explanatory. Cascade means it's already set for tear down, so no reason to double up.
@@ -77,67 +88,155 @@ public static class Utilities
                 (!isRoot && TearDownBehavior.GetCascade(bindableObject)))
                 return;
 
-            foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
-                TearDownImpl(childElement, false);
-
-            if (vte is VisualElement visualElement)
+            if (strategy == TearDownStrategy.DisconnectHandlers)
             {
-                // First, clear the BindingContext
-                visualElement.BindingContext = null;
-                
-                // Next, isolate the element.
-                visualElement.Parent = null;
+                if (current is IView view)
+                    DisconnectHandlersSafely(view);
 
-                if (vte is ListView listView)
-                    listView.ItemsSource = null;
-                else if (vte is ContentView contentView)
-                    contentView.Content = null;
-                else if (vte is Border border)
-                    border.Content = null;
-                else if (vte is ContentPage contentPage)
-                    contentPage.Content = null;
-                else if (vte is ScrollView scrollView)
-                    scrollView.Content = null;
+                return;
+            }
 
-                visualElement.ClearLogicalChildren();
+            foreach (IVisualTreeElement childElement in current.GetVisualChildren())
+                TearDownImpl(childElement, false, strategy);
 
-                // With the binding context cleared, and the element isolated, it has a chance to revert itself
-                // to a 'default' state.
+            ClearMauiReferences(current);
 
-                // The _last_ thing we want to do is disconnect the handler.
+            if (current is VisualElement visualElement)
+            {
                 if (visualElement.Handler != null)
                 {
                     TearDownBehavior.OnTearDown?.Invoke(visualElement);
-                    if (visualElement.Handler is IDisposable disposableHandler)
-                        disposableHandler.Dispose();
-                    visualElement.Handler?.DisconnectHandler();
+                    DisconnectHandlerSafely(visualElement);
                 }
 
-                visualElement.Resources = null;
+                ClearMauiReference(current, "resources", () => visualElement.Resources = null);
             }
-            else if (vte is Element element)
+            else if (current is Element element)
             {
-                element.BindingContext = null;
-                
-                element.Parent = null;
-
-                element.ClearLogicalChildren();
-
                 if (element.Handler != null)
                 {
                     TearDownBehavior.OnTearDown?.Invoke(element);
-
-#if IOS
-                    // Fixes issue specific to ListView on iOS, where RealCell is not nulled out.
-                    if (element is ViewCell && element.Handler.PlatformView is IDisposable disposablePlatformView)
-                        disposablePlatformView.Dispose();
-#endif
-
-                    if (element.Handler is IDisposable disposableElementHandler)
-                        disposableElementHandler.Dispose();
-                    element.Handler.DisconnectHandler();
+                    DisconnectHandlerSafely(element);
                 }
             }
         }
+    }
+
+    private static void DisconnectHandlersSafely(IView view)
+    {
+        List<IView> views = [];
+        BuildFlatList(view, views, true);
+
+        foreach (IView viewToDisconnect in views)
+            DisconnectHandlerSafely(viewToDisconnect);
+
+        return;
+
+        static void BuildFlatList(IView current, List<IView> views, bool isRoot)
+        {
+            if (current is BindableObject bindableObject)
+            {
+                if (HandlerProperties.GetDisconnectPolicy(bindableObject) == HandlerDisconnectPolicy.Manual ||
+                    TearDownBehavior.GetSuppress(bindableObject) ||
+                    (!isRoot && TearDownBehavior.GetCascade(bindableObject)))
+                    return;
+            }
+
+            views.Add(current);
+
+            if (current is not IVisualTreeElement visualTreeElement)
+                return;
+
+            foreach (IVisualTreeElement child in visualTreeElement.GetVisualChildren())
+                if (child is IView childView)
+                    BuildFlatList(childView, views, false);
+        }
+    }
+
+    private static void DisconnectHandlerSafely(IElement element)
+    {
+        IElementHandler? handler = element.Handler;
+        if (handler == null)
+            return;
+
+        try
+        {
+            handler.DisconnectHandler();
+        }
+        catch (Exception exception)
+        {
+            GarbageCollectionMonitor.Instance.Logger.LogWarning(
+                exception,
+                "Exception while disconnecting handler for {ElementType}",
+                element.GetType().FullName);
+        }
+    }
+
+    private static void ClearMauiReferences(IVisualTreeElement vte)
+    {
+        if (vte is VisualElement visualElement)
+            ClearMauiReference(vte, "behaviors", () => visualElement.Behaviors.Clear());
+
+        if (vte is Element element)
+        {
+            ClearMauiReference(vte, "binding context", () => element.BindingContext = null);
+            ClearMauiReference(vte, "parent", () => element.Parent = null);
+            ClearMauiReference(vte, "logical children", element.ClearLogicalChildren);
+        }
+
+        if (vte is View view)
+            ClearMauiReference(vte, "gesture recognizers", () => view.GestureRecognizers.Clear());
+
+        if (vte is Label label)
+            ClearMauiReference(vte, "formatted text", () => ClearFormattedTextReferences(label));
+
+        if (vte is ItemsView itemsView)
+        {
+            ClearMauiReference(vte, "item source", () => itemsView.ItemsSource = null);
+            ClearMauiReference(vte, "item template", () => itemsView.ItemTemplate = null);
+        }
+#pragma warning disable CS0618
+        else if (vte is ListView listView)
+        {
+            ClearMauiReference(vte, "item source", () => listView.ItemsSource = null);
+            ClearMauiReference(vte, "item template", () => listView.ItemTemplate = null);
+        }
+#pragma warning restore CS0618
+        else if (vte is ContentView contentView)
+            ClearMauiReference(vte, "content", () => contentView.Content = null);
+        else if (vte is Border border)
+            ClearMauiReference(vte, "content", () => border.Content = null);
+        else if (vte is ContentPage contentPage)
+            ClearMauiReference(vte, "content", () => contentPage.Content = null);
+        else if (vte is ScrollView scrollView)
+            ClearMauiReference(vte, "content", () => scrollView.Content = null);
+    }
+
+    private static void ClearMauiReference(IVisualTreeElement vte, string referenceName, Action clearReference)
+    {
+        try
+        {
+            clearReference();
+        }
+        catch (Exception exception)
+        {
+            GarbageCollectionMonitor.Instance.Logger.LogWarning(
+                exception,
+                "Exception while clearing {ReferenceName} for {ElementType}",
+                referenceName,
+                vte.GetType().FullName);
+        }
+    }
+
+    private static void ClearFormattedTextReferences(Label label)
+    {
+        if (label.FormattedText is not { } formattedText)
+            return;
+
+        foreach (Span span in formattedText.Spans)
+            span.GestureRecognizers.Clear();
+
+        formattedText.Spans.Clear();
+        label.FormattedText = null;
     }
 }

@@ -5,8 +5,11 @@ public partial class App
     public App()
     {
         InitializeComponent();
+    }
 
-        MainPage = new AppShell();
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        return new Window(new AppShell());
     }
 
     public int LeaksDetected { get; set; }

@@ -1,5 +1,6 @@
 using MemoryToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.ApplicationModel;
 
 namespace ShellSample;
 
@@ -19,12 +20,23 @@ public static class MauiProgram
 #if DEBUG
         builder.Logging.AddDebug();
         
-        builder.UseLeakDetection(collectionTarget =>
+        builder.UseMemoryToolkit(options =>
         {
-            Application.Current?.MainPage?.DisplayAlert("💦Leak Detected💦",
-                $"❗🧟❗{collectionTarget.Name} is a zombie!", "OK");
+            options.OnLeaked = collectionTarget =>
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    Page? currentPage = Application.Current?.Windows.FirstOrDefault()?.Page;
+                    if (currentPage != null)
+                        _ = currentPage.DisplayAlertAsync("Leak Detected",
+                            $"{collectionTarget.Name} is a zombie.", "OK");
 
-            ((App)Application.Current!).LeaksDetected++;
+                    if (Application.Current is App app)
+                        app.LeaksDetected++;
+                });
+            };
+
+            options.DefaultTearDownStrategy = TearDownStrategy.DisconnectHandlers;
         });
 #endif
 

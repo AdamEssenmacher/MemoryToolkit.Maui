@@ -1,26 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net8.0;net8.0-ios</TargetFrameworks>
+        <TargetFrameworks>net10.0;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <MauiVersion>10.0.0</MauiVersion>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
     </PropertyGroup>
     
     <PropertyGroup>
         <PackageId>AdamE.MemoryToolkit.Maui</PackageId>
-        <Version>1.0.0</Version>
+        <Version>2.0.0</Version>
         <Authors>adamessenmacher</Authors>
         <Description>A developer toolkit for detecting, diagnosing, and mitigating memory leaks in .NET MAUI applications.</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/AdamEssenmacher/MemoryToolkit.Maui</PackageProjectUrl>
         <RepositoryUrl>https://github.com/AdamEssenmacher/MemoryToolkit.Maui</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <Copyright>© 2024 Adam Essenmacher.</Copyright>
+        <Copyright>© 2026 Adam Essenmacher.</Copyright>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.3"/>
+        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)"/>
     </ItemGroup>
 
     <ItemGroup>
