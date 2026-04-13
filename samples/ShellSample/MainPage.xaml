@@ -17,7 +17,7 @@
                    HorizontalTextAlignment="Center" />
             <Label x:Name="LeakCountLabel"
                    HorizontalTextAlignment="Center" />
-            <local:LeakyLabel Text="The Label that you're currently reading intentionally leaks memory. Its purpose here is to demonstrate that without TearDownBehavior.Cascade, this single leaky label would cause the entire page, everything in it, and associated BindingContexts to leak too. With TearDownBehavior.Cascade, the leak is contained to just this label, which has a negligible practical impact on memory consumption."
+            <local:LeakyLabel Text="This label intentionally leaks through an app-level event subscription. In current MAUI, a tiny leaked view is less likely to retain its whole host page, but leaks can still retain strong references such as BindingContext, Content, resources, commands, and event subscriptions. Use leak monitoring to catch the zombie, and opt into Compartmentalize when you need stronger fault containment."
                               HorizontalTextAlignment="Center" />
         </VerticalStackLayout>
         <Grid Grid.Row="1">

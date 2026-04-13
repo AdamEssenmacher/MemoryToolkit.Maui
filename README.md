@@ -1,14 +1,14 @@
 # Overview
 
-MAUI leaks like a toddler's sippy cup. It's messy, gross, and feels hopelessly unavoidable.
+MAUI memory behavior is much better than it was when this project started, but real apps can still leak views, handlers, binding contexts, and platform resources.
 
 MemoryToolkit.Maui V2 is a .NET 10 rebaseline of the original toolkit. MAUI 9/10 introduced automatic handler disconnection and a `DisconnectHandlers()` API, so V2 defaults to a less destructive teardown path while keeping the original leak detection and containment tools available for apps that need them.
 
 MemoryToolkit.Maui offers three primary features to help manage this problem:
 
 - **Detects leaks** in MAUI views as they happen.
-- **Prevents certain classes of leaks** by automatically applying certain tear down measures.
-- **Compartmentalizes leaks** by breaking apart the visual tree, ensuring small leaks do not grow to consume their host pages.
+- **Requests cleanup for lifecycle-sensitive leaks** by using MAUI's handler disconnection path when views appear to be done.
+- **Optionally compartmentalizes leaks** by clearing strong managed references such as `BindingContext`, `Content`, `ItemsSource`, and `Parent` when you need stronger fault containment.
 
 If this project saves you time, money, or sanity, please consider [sponsoring me here on GitHub :heart:](https://github.com/sponsors/AdamEssenmacher)
 
@@ -129,10 +129,12 @@ A common use of the `ControlTemplate` is to change the appearance of a control a
 # How It Works
 
 ## Understanding the Underlying Problem
-There are two core architectural issues behind MAUI's systemic memory problem.
+There are two core issues MemoryToolkit.Maui is designed around.
 
-### Problem 1: Poor leak compartmentalization
-Memory leaks spread through MAUI pages like a zombie virus. Out of the box, they'll typically compartmentalize at the Page level. Meaning, **a leak of any size will grow to consume its entire host page**. This is _bad news_... particularly for `NavigationPages`! Naval vessels are built with compartmentalized designs to prevent a minor leak from becoming a catastrophic one. MAUI's design makes no attempt to contain leaks when they happen.
+### Problem 1: Leak propagation through strong references
+The V1/.NET 8-era failure mode was scary because small leaks could appear to retain much larger page graphs. Current MAUI is better: parent references are weak and handlers are disconnected automatically in common lifecycle cases, so a small leaked child is less likely to consume its whole host page.
+
+That does not mean leak propagation is solved. A leaked control can still strongly retain its own `BindingContext`, `Content`, `ItemsSource`, resources, event subscriptions, commands, or platform objects. V2 keeps stronger graph clearing behind the opt-in `Compartmentalize` strategy for cases where you know a view is done and want to reduce the amount of state any remaining leak can keep alive.
 
 ### Problem 2: Poor component lifecycle management
 Individual controls (e.g. `ListView`, `Border`, `Entry`, etc.) may be implemented in such a way that they need explicit handler cleanup to avoid memory leaks. This is particularly true on Apple platforms where cyclic references are not handled by the garbage collector. MAUI 9+ now disconnects handlers automatically in common cases and exposes `DisconnectHandlers()`, but apps can still need an intentional lifecycle signal when views are cached, moved, unloaded outside navigation, or need managed-reference containment.
@@ -162,23 +164,25 @@ When `Strategy="Compartmentalize"` is set, the behavior also clears binding cont
 In `Compartmentalize` mode, `TearDownBehavior.OnTearDown` runs before each element's handler is disconnected. Use this only for targeted control state cleanup that is safe to run when the view is done.
 
 # Sample App
-A sample MAUI project is included that demonstrates the severity of the issue, along with the toolkit's ability to detect and eliminate it. **The demonstration is meant to be run on iOS.**
+A sample MAUI project is included that demonstrates runtime leak detection and opt-in containment with a deliberately leaky control. This is a contrived demo, not proof that current MAUI turns every small leak into a full-page leak. Current MAUI is better than that; the sample gives the toolkit a predictable leak to find. **The demonstration is meant to be run on iOS or Mac Catalyst.**
 
 ## Observe a Leak
 The sample is a Shell app with a simple page that shows a scrollable list of 100 random photos from https://picsum.photos. Two buttons allow you to either push a new instance of the page on the navigation stack, or pop the current page. The current (managed) heap size is also displayed:
 
 <img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/9d5c8a60-5bc8-4b2a-aec5-25826e412bd7" height="200">
 
-Right off the bat, the app consumes ~38 MB of managed memory. An empty MAUI app uses ~7-8MB (at least on iOS). The other 30 MB is artificial for the sake of demonstration. The `CollectionView`'s `ItemsSource` property has been set to a collection of mocked-out 'view model' objects that each contain a 300KB byte array. Most view models probably won't be this big naturally, but it's definitely in the realm of possibility. Also, it's important to realize that the sample app is not reporting on memory used on the native side, which could easily be a couple 100 KB per item since we're showing images. The point here is that while the situation is contrived, it fairly demonstrates how available memory is quickly consumed by a MAUI app.
+Right off the bat, the app consumes ~38 MB of managed memory. An empty MAUI app uses ~7-8MB (at least on iOS). The other 30 MB is artificial for the sake of demonstration. The `CollectionView`'s `ItemsSource` property has been set to a collection of mocked-out 'view model' objects that each contain a 300KB byte array. Most view models probably won't be this big naturally, but it's definitely in the realm of possibility. Also, it's important to realize that the sample app is not reporting on memory used on the native side, which could easily be a couple 100 KB per item since we're showing images. The point here is that while the situation is contrived, it shows why retained view models or content graphs can matter.
 
-To demonstrate a leak for yourself, push & pop the page a few times. Each time you push, you'll see that our heap size increases by ~30 MB. This is expected given our contrived design--we need each page to stay in memory so we can return to it later via the 'Pop' button. These actions simulate a user navigating to and away from pages in your app.
+To demonstrate a leak for yourself, push & pop the page a few times. Each time you push, you'll see that the heap size increases because a new page and its mocked data are now on the navigation stack. When you pop a page, the intentionally leaky label remains rooted by an app-level event subscription, so MemoryToolkit.Maui has a predictable leak to report.
 
-After several push/pop cycles, the heap size will increase to several hundred MB. This is a _lot_ for a mobile app, and will eventually lead to the OS terminating it.
+In current MAUI, this single leaked label should not be assumed to retain the entire page and all of its data. The useful signal is whether the toolkit reports the leak and whether stronger cleanup reduces the amount of managed state a real leak can retain.
 
 ## Detect Leaks
-You might have noticed in the previous test that the on-screen "Leaks Detected" counter remains at 0. This is because we haven't enabled the leak detection feature of the toolkit yet. Open `MainPage.xaml` and change the value of the attached property `mtk:LeakMonitorBehavior.Cascade="False"` to 'True' and re-run your test. You'll notice that each time you push a new page, no new leaks are detected. However, each time you pop a page, several dozen leaks will be detected after a short delay (even more if you've scrolled around a bit).
+`LeakMonitorBehavior.Cascade` is enabled in the sample by default. Each time you push a new page, no new leaks should be detected because the old page is still on the navigation stack. Each time you pop a page, the toolkit waits for the old page to become collectible and then reports anything still rooted after repeated garbage collections.
 
 If you check out your debug output, you'll also see that each leaked Element / Handler has been logged as a warning.
 
-## Prevent Leaks
-To prevent leaks, open `MainPage.xaml` and change the value of the attached property `mtk:TearDownBehavior.Cascade="False"` to 'True' and re-run your test. You'll notice that each time you pop a page, the number of leaks detected will be 0. This is because the toolkit is now automatically tearing down each page as it's popped off the navigation stack. You'll also notice that managed memory usage is now stable at ~38 MB.
+## Contain Leaks
+To try stronger containment, open `MainPage.xaml`, change `mtk:TearDownBehavior.Cascade="False"` to `True`, and set `mtk:TearDownBehavior.Strategy="Compartmentalize"`. This does not fix external roots such as the sample's intentionally leaked app-level event subscription, but it does clear managed references such as `BindingContext`, `Content`, `ItemsSource`, and `Parent` when the view is done.
+
+Use the default `DisconnectHandlers` strategy when you want lower-destruction handler cleanup. Use `Compartmentalize` when you are validating propagation or trying to keep a known leak from retaining a larger managed object graph.
