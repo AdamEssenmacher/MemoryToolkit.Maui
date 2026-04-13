@@ -125,18 +125,22 @@ public static class Utilities
     private static void DisconnectHandlersSafely(IView view)
     {
         List<IView> views = [];
-        BuildFlatList(view, views);
+        BuildFlatList(view, views, true);
 
         foreach (IView viewToDisconnect in views)
             DisconnectHandlerSafely(viewToDisconnect);
 
         return;
 
-        static void BuildFlatList(IView current, List<IView> views)
+        static void BuildFlatList(IView current, List<IView> views, bool isRoot)
         {
-            if (current is BindableObject bindableObject &&
-                HandlerProperties.GetDisconnectPolicy(bindableObject) == HandlerDisconnectPolicy.Manual)
-                return;
+            if (current is BindableObject bindableObject)
+            {
+                if (HandlerProperties.GetDisconnectPolicy(bindableObject) == HandlerDisconnectPolicy.Manual ||
+                    TearDownBehavior.GetSuppress(bindableObject) ||
+                    (!isRoot && TearDownBehavior.GetCascade(bindableObject)))
+                    return;
+            }
 
             views.Add(current);
 
@@ -145,7 +149,7 @@ public static class Utilities
 
             foreach (IVisualTreeElement child in visualTreeElement.GetVisualChildren())
                 if (child is IView childView)
-                    BuildFlatList(childView, views);
+                    BuildFlatList(childView, views, false);
         }
     }
 

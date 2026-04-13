@@ -205,6 +205,50 @@ public sealed class TearDownStrategyTests
         Assert.Equal(0, handler.DisconnectCalls);
     }
 
+    [Fact]
+    public void DisconnectHandlersHonorsSuppressedChild()
+    {
+        var rootHandler = new TestElementHandler();
+        var suppressedHandler = new TestElementHandler();
+        var siblingHandler = new TestElementHandler();
+        var suppressedLabel = new Label { Handler = suppressedHandler };
+        var siblingLabel = new Label { Handler = siblingHandler };
+        var root = new Grid { Handler = rootHandler };
+        root.Add(suppressedLabel);
+        root.Add(siblingLabel);
+        TearDownBehavior.SetSuppress(suppressedLabel, true);
+
+        root.TearDown(TearDownStrategy.DisconnectHandlers);
+
+        Assert.Equal(1, rootHandler.DisconnectCalls);
+        Assert.Equal(0, suppressedHandler.DisconnectCalls);
+        Assert.Equal(1, siblingHandler.DisconnectCalls);
+    }
+
+    [Fact]
+    public void DisconnectHandlersHonorsChildCascadeBoundary()
+    {
+        var rootHandler = new TestElementHandler();
+        var boundaryHandler = new TestElementHandler();
+        var nestedHandler = new TestElementHandler();
+        var siblingHandler = new TestElementHandler();
+        var boundary = new Grid { Handler = boundaryHandler };
+        var nestedLabel = new Label { Handler = nestedHandler };
+        var siblingLabel = new Label { Handler = siblingHandler };
+        var root = new Grid { Handler = rootHandler };
+        boundary.Add(nestedLabel);
+        root.Add(boundary);
+        root.Add(siblingLabel);
+        TearDownBehavior.SetCascade(boundary, true);
+
+        root.TearDown(TearDownStrategy.DisconnectHandlers);
+
+        Assert.Equal(1, rootHandler.DisconnectCalls);
+        Assert.Equal(0, boundaryHandler.DisconnectCalls);
+        Assert.Equal(0, nestedHandler.DisconnectCalls);
+        Assert.Equal(1, siblingHandler.DisconnectCalls);
+    }
+
     private static (ContentPage Page, Grid Root, Label Label, object BindingContext) CreatePageGraph()
     {
         var bindingContext = new object();
