@@ -21,8 +21,16 @@ public sealed class TearDownStrategyTests
         (ContentPage page, Grid root, Label label, object bindingContext) = CreatePageGraph();
         var gestureRecognizer = new TapGestureRecognizer();
         var behavior = new TestBehavior();
+        var itemsSource = new[] { new object() };
+        var itemTemplate = new DataTemplate(() => new Label());
+        var collectionView = new CollectionView
+        {
+            ItemsSource = itemsSource,
+            ItemTemplate = itemTemplate
+        };
         (FormattedString formattedText, Span span, TapGestureRecognizer spanGestureRecognizer) =
             AddFormattedTextWithGesture(label);
+        root.Add(collectionView);
         label.Behaviors.Add(behavior);
         label.GestureRecognizers.Add(gestureRecognizer);
 
@@ -32,6 +40,8 @@ public sealed class TearDownStrategyTests
         Assert.Same(bindingContext, page.BindingContext);
         Assert.Same(bindingContext, root.BindingContext);
         Assert.Same(bindingContext, label.BindingContext);
+        Assert.Same(itemsSource, collectionView.ItemsSource);
+        Assert.Same(itemTemplate, collectionView.ItemTemplate);
         Assert.Same(behavior, Assert.Single(label.Behaviors));
         Assert.Same(gestureRecognizer, Assert.Single(label.GestureRecognizers));
         Assert.Same(formattedText, label.FormattedText);
@@ -43,7 +53,13 @@ public sealed class TearDownStrategyTests
     public void CompartmentalizeClearsManagedReferences()
     {
         (ContentPage page, Grid root, Label label, _) = CreatePageGraph();
+        var collectionView = new CollectionView
+        {
+            ItemsSource = new[] { new object() },
+            ItemTemplate = new DataTemplate(() => new Label())
+        };
         (FormattedString formattedText, Span span, _) = AddFormattedTextWithGesture(label);
+        root.Add(collectionView);
         label.Behaviors.Add(new TestBehavior());
         label.GestureRecognizers.Add(new TapGestureRecognizer());
 
@@ -55,6 +71,8 @@ public sealed class TearDownStrategyTests
         Assert.Null(label.BindingContext);
         Assert.Null(root.Parent);
         Assert.Null(label.Parent);
+        Assert.Null(collectionView.ItemsSource);
+        Assert.Null(collectionView.ItemTemplate);
         Assert.Empty(label.Behaviors);
         Assert.Empty(label.GestureRecognizers);
         Assert.Null(label.FormattedText);

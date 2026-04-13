@@ -186,9 +186,17 @@ public static class Utilities
         if (vte is Label label)
             ClearFormattedTextReferences(label);
 
+        if (vte is ItemsView itemsView)
+        {
+            itemsView.ItemsSource = null;
+            itemsView.ItemTemplate = null;
+        }
 #pragma warning disable CS0618
-        if (vte is ListView listView)
+        else if (vte is ListView listView)
+        {
             listView.ItemsSource = null;
+            listView.ItemTemplate = null;
+        }
 #pragma warning restore CS0618
         else if (vte is ContentView contentView)
             contentView.Content = null;
