@@ -11,7 +11,7 @@ public partial class MainPage
     {
         InitializeComponent();
 
-        ListView.ItemsSource = Enumerable.Range(1, 100)
+        ItemsView.ItemsSource = Enumerable.Range(1, 100)
             .Select(_ => new ListItem { ImageUrl = $"https://picsum.photos/seed/{_random.Next(1000)}/640/360" })
             .ToImmutableArray();
 
