@@ -8,4 +8,10 @@ This folder contains opt-in, local smoke tests that exercise the MAUI sample app
 tests/smoke/run-maccatalyst-smoke.sh
 ```
 
-The smoke test is intentionally not a leak-lab or device-audit harness, and it is not wired into CI. It exists to sanity-check the V2 package and sample app startup path locally without making normal `dotnet test` runs depend on Mac Catalyst UI launch behavior.
+`run-maccatalyst-e2e.sh` builds and launches the focused MAUI e2e test app. It verifies that `LeakMonitorBehavior` and `TearDownBehavior` run from real MAUI `Unloaded`/navigation lifecycle events and that a popped page graph is released after compartmentalization:
+
+```sh
+tests/smoke/run-maccatalyst-e2e.sh
+```
+
+These smoke tests are intentionally not a leak-lab or device-audit harness, and they are not wired into CI. They exist to sanity-check the V2 package and sample/test app startup paths locally without making normal `dotnet test` runs depend on Mac Catalyst UI launch behavior.
