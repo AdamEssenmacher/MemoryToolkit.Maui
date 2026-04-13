@@ -28,14 +28,12 @@ public sealed class TearDownStrategyTests
         Assert.Same(bindingContext, label.BindingContext);
     }
 
-    [Theory]
-    [InlineData(TearDownStrategy.Compartmentalize)]
-    [InlineData(TearDownStrategy.AggressiveLegacy)]
-    public void GraphClearingStrategiesCompartmentalizeManagedReferences(TearDownStrategy strategy)
+    [Fact]
+    public void CompartmentalizeClearsManagedReferences()
     {
         (ContentPage page, Grid root, Label label, _) = CreatePageGraph();
 
-        page.TearDown(strategy);
+        page.TearDown(TearDownStrategy.Compartmentalize);
 
         Assert.Null(page.Content);
         Assert.Null(page.BindingContext);

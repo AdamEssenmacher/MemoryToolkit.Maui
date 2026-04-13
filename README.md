@@ -100,14 +100,13 @@ Both `LeakMonitorBehavior` and `TearDownBehavior` offer an attached property `Su
 In some cases, known leaks may be worked around by whacking the control into a safe state when we're done with it. For example, an `SKLottieView` from SkiaSharp once leaked as long as its `IsAnimationEnabled` property was set to True. The `TearDownBehavior` class offers a static `Action<object>` property `OnTearDown` that is invoked immediately before each call to `DisconnectHandler()`. You may use this hook to examine the view and change its state (for example, to set an `SKLottieView`'s `IsAnimationEnabled` property to 'false').
 
 ## Teardown Strategies
-V2 offers four teardown strategies:
+V2 offers three teardown strategies:
 
 - `DetectOnly`: do not tear down; useful for leak monitoring-only runs.
 - `DisconnectHandlers`: call MAUI's built-in handler disconnection path. This is the V2 default.
 - `Compartmentalize`: clear binding contexts, parent/content references, logical children, and resources before disconnecting handlers.
-- `AggressiveLegacy`: preserve V1-style aggressive cleanup, including handler `Dispose()` calls and the old iOS `ViewCell` platform-view disposal workaround.
 
-Prefer `DisconnectHandlers` first on MAUI 10. Use `Compartmentalize` when you are validating leak propagation or need fault containment, and reserve `AggressiveLegacy` for known old leaks that still reproduce.
+Prefer `DisconnectHandlers` first on MAUI 10. Use `Compartmentalize` when you are validating leak propagation or need fault containment.
 
 ## Temporarily Unloaded NavigationPages
 There are a few common-enough scenarios where you'll expect a `NavigationPage` to be unloaded only temporarily. For example, calling `Browser.OpenAsync(..)`. In these cases, you can temporarily set the 'Suppress' properties on the `NavigationPage` itself, which will cause all behaviors within the page to be ignored. Here's an example handler method:
@@ -160,7 +159,7 @@ While quite effective, `TearDownBehavior.Cascade` is an extremely destructive to
 The behavior next does its best to remove any references each view has to other views. It does this by setting certain properties to null (such as `ItemsSource`, `Content`, and `Parent`) and calling `ClearLogicalChildren()`. If this step fails to remove references to other objects, the leak will spread. I expect that this process will improve as MemoryToolkit.Maui matures.
 
 ### Phase 3) Handler Cleanup
-V2 defaults to MAUI's built-in `DisconnectHandlers()` behavior. `Compartmentalize` still clears the surrounding MAUI object graph before disconnecting handlers, while `AggressiveLegacy` keeps the old `Dispose()`-heavy cleanup available for targeted compatibility tests.
+V2 defaults to MAUI's built-in `DisconnectHandlers()` behavior. `Compartmentalize` still clears the surrounding MAUI object graph before disconnecting handlers.
 
 # Sample App
 A sample MAUI project is included that demonstrates the severity of the issue, along with the toolkit's ability to detect and eliminate it. **The demonstration is meant to be run on iOS.**

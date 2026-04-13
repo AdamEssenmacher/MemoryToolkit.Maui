@@ -105,11 +105,6 @@ public static class Utilities
                 if (visualElement.Handler != null)
                 {
                     TearDownBehavior.OnTearDown?.Invoke(visualElement);
-
-                    if (strategy == TearDownStrategy.AggressiveLegacy &&
-                        visualElement.Handler is IDisposable disposableHandler)
-                        disposableHandler.Dispose();
-
                     visualElement.Handler.DisconnectHandler();
                 }
 
@@ -120,21 +115,6 @@ public static class Utilities
                 if (element.Handler != null)
                 {
                     TearDownBehavior.OnTearDown?.Invoke(element);
-
-#if IOS
-#pragma warning disable CS0618
-                    // Fixes issue specific to ListView on iOS, where RealCell is not nulled out.
-                    if (strategy == TearDownStrategy.AggressiveLegacy &&
-                        element is ViewCell &&
-                        element.Handler.PlatformView is IDisposable disposablePlatformView)
-                        disposablePlatformView.Dispose();
-#pragma warning restore CS0618
-#endif
-
-                    if (strategy == TearDownStrategy.AggressiveLegacy &&
-                        element.Handler is IDisposable disposableElementHandler)
-                        disposableElementHandler.Dispose();
-
                     element.Handler.DisconnectHandler();
                 }
             }
