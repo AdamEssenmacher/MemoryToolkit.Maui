@@ -152,6 +152,9 @@ V2 currently treats a view as done in these cases:
 - The view is hosted within a `NavigationPage` that has itself unloaded and has not been suppressed.
 - The view is not hosted within a `NavigationPage`, remains unloaded after a short delay, is no longer in a navigation/modal stack, and is not still hosted by Shell.
 
+Automatic lifecycle inference skips `NavigationPage` containers themselves, because MAUI can keep navigation/modal stack state there while pages are temporarily unloaded. If you intentionally destroy a navigation container, call `TearDown()` directly.
+It also skips views hosted by a `NavigationPage` while that navigation page still has active modal pages.
+
 Out of the box, MemoryToolkit.Maui uses this definition to automatically apply leak monitoring and low-destruction handler disconnection. Compartmentalization is opt-in.
 
 This is not comprehensive Shell, flyout, tab, or modal navigation tracking. It also cannot detect subviews that were dynamically removed before unload, and it should not be used as the only lifecycle signal for intentionally cached pages. In cases where this definition doesn't apply, MemoryToolkit.Maui still offers tools so developers can take direct control with `Monitor()` and `TearDown()`.

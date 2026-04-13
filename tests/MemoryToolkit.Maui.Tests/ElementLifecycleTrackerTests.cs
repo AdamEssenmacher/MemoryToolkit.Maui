@@ -114,6 +114,45 @@ public sealed class ElementLifecycleTrackerTests
     }
 
     [Fact]
+    public async Task RunWhenDoneDoesNotRunForNavigationPageContainerWithModalStack()
+    {
+        var rootPage = new ContentPage();
+        var navigationPage = new NavigationPage(rootPage);
+        await navigationPage.Navigation.PushModalAsync(new ContentPage(), false);
+        var wasCalled = false;
+        var action = new LifecycleAction(
+            "test",
+            _ => false,
+            _ => wasCalled = true);
+
+        await ElementLifecycleTracker.RunWhenDoneAsync(navigationPage, action);
+
+        Assert.False(wasCalled);
+    }
+
+    [Fact]
+    public async Task RunWhenDoneDoesNotRunForNavigationPageChildWhenModalStackIsActive()
+    {
+        var element = new Label();
+        var rootPage = new ContentPage
+        {
+            Content = element
+        };
+        var navigationPage = new NavigationPage(rootPage);
+        await navigationPage.Navigation.PushModalAsync(new ContentPage(), false);
+        var wasCalled = false;
+        var action = new LifecycleAction(
+            "test",
+            _ => false,
+            _ => wasCalled = true);
+
+        await ElementLifecycleTracker.RunWhenDoneAsync(element, action);
+
+        GC.KeepAlive(navigationPage);
+        Assert.False(wasCalled);
+    }
+
+    [Fact]
     public async Task RunWhenDoneRunsWhenShellPageLeavesNavigationStack()
     {
         var element = new Label();

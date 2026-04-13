@@ -15,6 +15,9 @@ internal static class ElementLifecycleTracker
         if (action.IsSuppressed(visualElement))
             return;
 
+        if (visualElement is NavigationPage)
+            return;
+
         var hostPage = Utilities.GetFirstSelfOrParentOfType<Page>(visualElement);
         if (hostPage is null)
         {
@@ -59,6 +62,9 @@ internal static class ElementLifecycleTracker
         NavigationPage navigationPage,
         LifecycleAction action)
     {
+        if (navigationPage.Navigation.ModalStack.Count > 0)
+            return;
+
         if (!navigationPage.IsLoaded)
         {
             if (!action.IsSuppressed(navigationPage))
