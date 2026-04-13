@@ -43,6 +43,42 @@ public sealed class TearDownStrategyTests
         Assert.Null(label.Parent);
     }
 
+    [Theory]
+    [InlineData(TearDownStrategy.DisconnectHandlers)]
+    [InlineData(TearDownStrategy.Compartmentalize)]
+    public void TearDownContinuesWhenAHandlerDisconnectThrows(TearDownStrategy strategy)
+    {
+        var throwingLabel = new Label();
+        var healthyLabel = new Label();
+        var throwingHandler = new TestElementHandler { ThrowOnDisconnect = true };
+        var healthyHandler = new TestElementHandler();
+        throwingLabel.Handler = throwingHandler;
+        healthyLabel.Handler = healthyHandler;
+
+        var root = new Grid();
+        root.Add(throwingLabel);
+        root.Add(healthyLabel);
+
+        Exception? exception = Record.Exception(() => root.TearDown(strategy));
+
+        Assert.Null(exception);
+        Assert.Equal(1, throwingHandler.DisconnectCalls);
+        Assert.Equal(1, healthyHandler.DisconnectCalls);
+    }
+
+    [Fact]
+    public void DisconnectHandlersHonorsManualDisconnectPolicy()
+    {
+        var label = new Label();
+        var handler = new TestElementHandler();
+        label.Handler = handler;
+        HandlerProperties.SetDisconnectPolicy(label, HandlerDisconnectPolicy.Manual);
+
+        label.TearDown(TearDownStrategy.DisconnectHandlers);
+
+        Assert.Equal(0, handler.DisconnectCalls);
+    }
+
     private static (ContentPage Page, Grid Root, Label Label, object BindingContext) CreatePageGraph()
     {
         var bindingContext = new object();
@@ -62,5 +98,59 @@ public sealed class TearDownStrategyTests
         label.BindingContext = bindingContext;
 
         return (page, root, label, bindingContext);
+    }
+
+    private sealed class TestElementHandler : IViewHandler
+    {
+        public bool ThrowOnDisconnect { get; init; }
+
+        public int DisconnectCalls { get; private set; }
+
+        public object? PlatformView => null;
+
+        public object? ContainerView => null;
+
+        public bool HasContainer { get; set; }
+
+        public IView? VirtualView { get; private set; }
+
+        IElement? IElementHandler.VirtualView => VirtualView;
+
+        public IMauiContext? MauiContext { get; private set; }
+
+        public void SetMauiContext(IMauiContext mauiContext)
+        {
+            MauiContext = mauiContext;
+        }
+
+        public void SetVirtualView(IElement view)
+        {
+            VirtualView = (IView)view;
+        }
+
+        public void UpdateValue(string property)
+        {
+        }
+
+        public void Invoke(string command, object? args)
+        {
+        }
+
+        public Microsoft.Maui.Graphics.Size GetDesiredSize(double widthConstraint, double heightConstraint)
+        {
+            return Microsoft.Maui.Graphics.Size.Zero;
+        }
+
+        public void PlatformArrange(Microsoft.Maui.Graphics.Rect frame)
+        {
+        }
+
+        public void DisconnectHandler()
+        {
+            DisconnectCalls++;
+
+            if (ThrowOnDisconnect)
+                throw new InvalidOperationException("Test disconnect failure.");
+        }
     }
 }

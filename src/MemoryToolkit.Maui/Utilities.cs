@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui;
 
 namespace MemoryToolkit.Maui;
@@ -90,7 +91,7 @@ public static class Utilities
             if (strategy == TearDownStrategy.DisconnectHandlers)
             {
                 if (current is IView view)
-                    view.DisconnectHandlers();
+                    DisconnectHandlersSafely(view);
 
                 return;
             }
@@ -105,7 +106,7 @@ public static class Utilities
                 if (visualElement.Handler != null)
                 {
                     TearDownBehavior.OnTearDown?.Invoke(visualElement);
-                    visualElement.Handler.DisconnectHandler();
+                    DisconnectHandlerSafely(visualElement);
                 }
 
                 visualElement.Resources = null;
@@ -115,9 +116,55 @@ public static class Utilities
                 if (element.Handler != null)
                 {
                     TearDownBehavior.OnTearDown?.Invoke(element);
-                    element.Handler.DisconnectHandler();
+                    DisconnectHandlerSafely(element);
                 }
             }
+        }
+    }
+
+    private static void DisconnectHandlersSafely(IView view)
+    {
+        List<IView> views = [];
+        BuildFlatList(view, views);
+
+        foreach (IView viewToDisconnect in views)
+            DisconnectHandlerSafely(viewToDisconnect);
+
+        return;
+
+        static void BuildFlatList(IView current, List<IView> views)
+        {
+            if (current is BindableObject bindableObject &&
+                HandlerProperties.GetDisconnectPolicy(bindableObject) == HandlerDisconnectPolicy.Manual)
+                return;
+
+            views.Add(current);
+
+            if (current is not IVisualTreeElement visualTreeElement)
+                return;
+
+            foreach (IVisualTreeElement child in visualTreeElement.GetVisualChildren())
+                if (child is IView childView)
+                    BuildFlatList(childView, views);
+        }
+    }
+
+    private static void DisconnectHandlerSafely(IElement element)
+    {
+        IElementHandler? handler = element.Handler;
+        if (handler == null)
+            return;
+
+        try
+        {
+            handler.DisconnectHandler();
+        }
+        catch (Exception exception)
+        {
+            GarbageCollectionMonitor.Instance.Logger.LogWarning(
+                exception,
+                "Exception while disconnecting handler for {ElementType}",
+                element.GetType().FullName);
         }
     }
 
