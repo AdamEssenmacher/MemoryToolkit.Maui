@@ -71,7 +71,7 @@ If you've configured the callback as demonstrated above, you'll also see a runti
 <img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/6815c761-d5c6-4948-94ad-49bc446ba081" height="200">
 
 ## Fix leaks
-Once leaks have been detected, you can make sure they are automatically compartmentalized--and possibly even fixed--by adding the `TearDownBehavior.Cascade` attached property.
+Once leaks have been detected, you can ask MemoryToolkit.Maui to apply an explicit teardown step when a view appears to be done. The V2 default uses MAUI's built-in `DisconnectHandlers()` path. If you also need to break managed references such as `BindingContext`, `Content`, `ItemsSource`, and `Parent`, opt into `Compartmentalize`.
 
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -81,7 +81,7 @@ Once leaks have been detected, you can make sure they are automatically compartm
              mtk:LeakMonitorBehavior.Cascade="True"
              mtk:TearDownBehavior.Cascade="True"
              mtk:TearDownBehavior.Strategy="DisconnectHandlers">
-    <!-- All child views are now automatically torn down. -->
+    <!-- Child views now request handler disconnection when they are done. -->
 </ContentPage>
 ```
 Note: When using both `LeakMonitorBehavior` and `TearDownBehavior`, make sure `TearDownBehavior` comes after `LeakMonitorBehavior` in the XAML.
@@ -97,7 +97,7 @@ Warning: since the `LeakMonitorBehavior` works by walking the visual tree on Unl
 Both `LeakMonitorBehavior` and `TearDownBehavior` offer an attached property `Suppress` that can be set to 'true' to exclude any view (and its subviews) from the effects of the behavior. This can be useful in cases where you're already aware of a leak and wish to suppress further warnings. Or perhaps you may not actually expect that view to be automatically monitored or torn down according to our definition of 'done with' (for example, for view caching).
 
 ## Custom Teardown Hook
-In some cases, known leaks may be worked around by whacking the control into a safe state when we're done with it. For example, an `SKLottieView` from SkiaSharp once leaked as long as its `IsAnimationEnabled` property was set to True. The `TearDownBehavior` class offers a static `Action<object>` property `OnTearDown` that is invoked immediately before each call to `DisconnectHandler()`. You may use this hook to examine the view and change its state (for example, to set an `SKLottieView`'s `IsAnimationEnabled` property to 'false').
+In some cases, known leaks may be worked around by whacking the control into a safe state when we're done with it. For example, an `SKLottieView` from SkiaSharp once leaked as long as its `IsAnimationEnabled` property was set to True. The `TearDownBehavior` class offers a static `Action<object>` property `OnTearDown` that is invoked before the toolkit disconnects each element's handler in `Compartmentalize` mode. The default `DisconnectHandlers` strategy delegates directly to MAUI's tree-wide extension method and does not run this per-element hook.
 
 ## Teardown Strategies
 V2 offers three teardown strategies:
@@ -106,7 +106,7 @@ V2 offers three teardown strategies:
 - `DisconnectHandlers`: call MAUI's built-in handler disconnection path. This is the V2 default.
 - `Compartmentalize`: clear binding contexts, parent/content references, logical children, and resources before disconnecting handlers.
 
-Prefer `DisconnectHandlers` first on MAUI 10. Use `Compartmentalize` when you are validating leak propagation or need fault containment.
+MAUI 9+ already disconnects handlers automatically in common cases, such as back navigation, and exposes `DisconnectHandlers()` for explicit cleanup. MemoryToolkit.Maui keeps `DisconnectHandlers` as the default because it gives the toolkit a low-destruction cleanup action when its lifecycle inference says a view is done. Use `Compartmentalize` when you are validating leak propagation or need fault containment.
 
 ## Temporarily Unloaded NavigationPages
 There are a few common-enough scenarios where you'll expect a `NavigationPage` to be unloaded only temporarily. For example, calling `Browser.OpenAsync(..)`. In these cases, you can temporarily set the 'Suppress' properties on the `NavigationPage` itself, which will cause all behaviors within the page to be ignored. Here's an example handler method:
@@ -135,7 +135,7 @@ There are two core architectural issues behind MAUI's systemic memory problem.
 Memory leaks spread through MAUI pages like a zombie virus. Out of the box, they'll typically compartmentalize at the Page level. Meaning, **a leak of any size will grow to consume its entire host page**. This is _bad news_... particularly for `NavigationPages`! Naval vessels are built with compartmentalized designs to prevent a minor leak from becoming a catastrophic one. MAUI's design makes no attempt to contain leaks when they happen.
 
 ### Problem 2: Poor component lifecycle management
-Individual controls (e.g. `ListView`, `Border`, `Entry`, etc.) may be implemented in such a way that they **require** explicit cleanup (i.e. via calls to `DisconnectHandler()` and/or `Dispose()` to avoid memory leaks. (This is particularly true on Apple platforms where cyclic references are not handled by the garbage collector.) It is _critical_ that these cleanup methods are called, but MAUI provides no mechanism (such as a standard component lifecycle) to do so for you. They say that this is "by design". The justification is that MAUI should not make any assumptions about when the developer is 'done with' a given element. For example, a view might be cached or getting moved between pages. Even if we accept this argument, MAUI _still_ doesn't offer developers a standard mechanism to easily and intentionally manage this problem.
+Individual controls (e.g. `ListView`, `Border`, `Entry`, etc.) may be implemented in such a way that they need explicit handler cleanup to avoid memory leaks. This is particularly true on Apple platforms where cyclic references are not handled by the garbage collector. MAUI 9+ now disconnects handlers automatically in common cases and exposes `DisconnectHandlers()`, but apps can still need an intentional lifecycle signal when views are cached, moved, unloaded outside navigation, or need managed-reference containment.
 
 ## Defining 'done with'
 
@@ -145,21 +145,21 @@ Lacking an officially supported view lifecycle management mechanism, MemoryToolk
 - The `Element` has been unloaded and is not (or no longer) hosted within a `Page` (e.g. a `ControlTemplate` that was just swapped out).
 - The `Element` is hosted within a `NavigationPage` that has been unloaded (this can be temporarily ignored; see the 'Advanced Use' section below).
 
-Out of the box, MemoryToolkit.Maui uses this definition to automatically apply leak monitoring, prevention, and compartmentalization features.
+Out of the box, MemoryToolkit.Maui uses this definition to automatically apply leak monitoring and low-destruction handler disconnection. Compartmentalization is opt-in.
 
 This definition is likely incomplete (we probably need to consider things like nested modal navigation and tabbed pages), but I think it's a good starting point. In cases where this definition doesn't apply (e.g. cached pages), MemoryToolkit.Maui still offers tools so developers can take direct control over monitoring and managing component lifecycles.
 
 ## How does TearDownBehavior work?
-While quite effective, `TearDownBehavior.Cascade` is an extremely destructive tool. As such, it's important that you understand what it does. If it runs prematurely, it _will_ bork your app.
+`TearDownBehavior.Cascade` runs when MemoryToolkit.Maui believes a view is done. The default strategy is intentionally low-destruction, but `Compartmentalize` is much more invasive and should only be used when you understand what it clears.
 
-### Phase 1) Clearing BindingContext
-`TearDownBehavior` clears the `BindingContext` from views automatically, which helps prevent leaks from spreading to view models. This also tends to 'whack' the view into a near-default state, which can avoid a certain class of memory leaks.
+### Phase 1) Handler disconnection
+By default, `TearDownBehavior` calls MAUI's built-in `DisconnectHandlers()` extension when a view appears to be done. This is the least destructive V2 strategy and does not clear managed references such as `BindingContext`, `Content`, or `Parent`.
 
-### Phase 2) Compartmentalization
-The behavior next does its best to remove any references each view has to other views. It does this by setting certain properties to null (such as `ItemsSource`, `Content`, and `Parent`) and calling `ClearLogicalChildren()`. If this step fails to remove references to other objects, the leak will spread. I expect that this process will improve as MemoryToolkit.Maui matures.
+### Phase 2) Optional compartmentalization
+When `Strategy="Compartmentalize"` is set, the behavior also clears binding contexts and removes references each view has to other views. It does this by setting certain properties to null (such as `ItemsSource`, `Content`, and `Parent`) and calling `ClearLogicalChildren()`. If this step fails to remove references to other objects, the leak can still spread.
 
-### Phase 3) Handler Cleanup
-V2 defaults to MAUI's built-in `DisconnectHandlers()` behavior. `Compartmentalize` still clears the surrounding MAUI object graph before disconnecting handlers.
+### Phase 3) Per-control cleanup hook
+In `Compartmentalize` mode, `TearDownBehavior.OnTearDown` runs before each element's handler is disconnected. Use this only for targeted control state cleanup that is safe to run when the view is done.
 
 # Sample App
 A sample MAUI project is included that demonstrates the severity of the issue, along with the toolkit's ability to detect and eliminate it. **The demonstration is meant to be run on iOS.**
