@@ -19,6 +19,8 @@ public sealed class TearDownStrategyTests
     public void DisconnectHandlersDoesNotClearManagedObjectGraph()
     {
         (ContentPage page, Grid root, Label label, object bindingContext) = CreatePageGraph();
+        var gestureRecognizer = new TapGestureRecognizer();
+        label.GestureRecognizers.Add(gestureRecognizer);
 
         page.TearDown(TearDownStrategy.DisconnectHandlers);
 
@@ -26,12 +28,14 @@ public sealed class TearDownStrategyTests
         Assert.Same(bindingContext, page.BindingContext);
         Assert.Same(bindingContext, root.BindingContext);
         Assert.Same(bindingContext, label.BindingContext);
+        Assert.Same(gestureRecognizer, Assert.Single(label.GestureRecognizers));
     }
 
     [Fact]
     public void CompartmentalizeClearsManagedReferences()
     {
         (ContentPage page, Grid root, Label label, _) = CreatePageGraph();
+        label.GestureRecognizers.Add(new TapGestureRecognizer());
 
         page.TearDown(TearDownStrategy.Compartmentalize);
 
@@ -41,6 +45,7 @@ public sealed class TearDownStrategyTests
         Assert.Null(label.BindingContext);
         Assert.Null(root.Parent);
         Assert.Null(label.Parent);
+        Assert.Empty(label.GestureRecognizers);
     }
 
     [Theory]

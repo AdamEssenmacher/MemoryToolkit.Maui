@@ -177,6 +177,9 @@ public static class Utilities
             element.ClearLogicalChildren();
         }
 
+        if (vte is View view)
+            view.GestureRecognizers.Clear();
+
 #pragma warning disable CS0618
         if (vte is ListView listView)
             listView.ItemsSource = null;

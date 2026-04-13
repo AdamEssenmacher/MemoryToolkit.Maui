@@ -8,7 +8,7 @@ MemoryToolkit.Maui offers three primary features to help manage this problem:
 
 - **Detects leaks** in MAUI views as they happen.
 - **Requests cleanup for lifecycle-sensitive leaks** by using MAUI's handler disconnection path when views appear to be done.
-- **Optionally compartmentalizes leaks** by clearing strong managed references such as `BindingContext`, `Content`, `ItemsSource`, and `Parent` when you need stronger fault containment.
+- **Optionally compartmentalizes leaks** by clearing strong managed references such as `BindingContext`, `Content`, `ItemsSource`, gesture recognizers, and `Parent` when you need stronger fault containment.
 
 If this project saves you time, money, or sanity, please consider [sponsoring me here on GitHub :heart:](https://github.com/sponsors/AdamEssenmacher)
 
@@ -71,7 +71,7 @@ If you've configured the callback as demonstrated above, you'll also see a runti
 <img src="https://github.com/AdamEssenmacher/MemoryToolkit.Maui/assets/8496021/6815c761-d5c6-4948-94ad-49bc446ba081" height="200">
 
 ## Fix leaks
-Once leaks have been detected, you can ask MemoryToolkit.Maui to apply an explicit teardown step when a view appears to be done. The V2 default uses MAUI's built-in `DisconnectHandlers()` path. If you also need to break managed references such as `BindingContext`, `Content`, `ItemsSource`, and `Parent`, opt into `Compartmentalize`.
+Once leaks have been detected, you can ask MemoryToolkit.Maui to apply an explicit teardown step when a view appears to be done. The V2 default uses MAUI's built-in `DisconnectHandlers()` path. If you also need to break managed references such as `BindingContext`, `Content`, `ItemsSource`, gesture recognizers, and `Parent`, opt into `Compartmentalize`.
 
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -104,7 +104,7 @@ V2 offers three teardown strategies:
 
 - `DetectOnly`: do not tear down; useful for leak monitoring-only runs.
 - `DisconnectHandlers`: call MAUI's built-in handler disconnection path. This is the V2 default.
-- `Compartmentalize`: clear binding contexts, parent/content references, logical children, and resources before disconnecting handlers.
+- `Compartmentalize`: clear binding contexts, parent/content references, gesture recognizers, logical children, and resources before disconnecting handlers.
 
 MAUI 9+ already disconnects handlers automatically in common cases, such as back navigation, and exposes `DisconnectHandlers()` for explicit cleanup. MemoryToolkit.Maui keeps `DisconnectHandlers` as the default because it gives the toolkit a low-destruction cleanup action when its lifecycle inference says a view is done. Use `Compartmentalize` when you are validating leak propagation or need fault containment.
 
@@ -161,7 +161,7 @@ This is not comprehensive Shell, flyout, tab, or modal navigation tracking. It a
 By default, `TearDownBehavior` calls MAUI's built-in `DisconnectHandlers()` extension when a view appears to be done. This is the least destructive V2 strategy and does not clear managed references such as `BindingContext`, `Content`, or `Parent`.
 
 ### Phase 2) Optional compartmentalization
-When `Strategy="Compartmentalize"` is set, the behavior also clears binding contexts and removes references each view has to other views. It does this by setting certain properties to null (such as `ItemsSource`, `Content`, and `Parent`) and calling `ClearLogicalChildren()`. If this step fails to remove references to other objects, the leak can still spread.
+When `Strategy="Compartmentalize"` is set, the behavior also clears binding contexts and removes references each view has to other views. It does this by setting certain properties to null (such as `ItemsSource`, `Content`, and `Parent`), clearing gesture recognizers, and calling `ClearLogicalChildren()`. If this step fails to remove references to other objects, the leak can still spread.
 
 ### Phase 3) Per-control cleanup hook
 In `Compartmentalize` mode, `TearDownBehavior.OnTearDown` runs before each element's handler is disconnected. Use this only for targeted control state cleanup that is safe to run when the view is done.
@@ -186,6 +186,6 @@ In current MAUI, this single leaked label should not be assumed to retain the en
 If you check out your debug output, you'll also see that each leaked Element / Handler has been logged as a warning.
 
 ## Contain Leaks
-To try stronger containment, open `MainPage.xaml`, change `mtk:TearDownBehavior.Cascade="False"` to `True`, and set `mtk:TearDownBehavior.Strategy="Compartmentalize"`. This does not fix external roots such as the sample's intentionally leaked app-level event subscription, but it does clear managed references such as `BindingContext`, `Content`, `ItemsSource`, and `Parent` when the view is done.
+To try stronger containment, open `MainPage.xaml`, change `mtk:TearDownBehavior.Cascade="False"` to `True`, and set `mtk:TearDownBehavior.Strategy="Compartmentalize"`. This does not fix external roots such as the sample's intentionally leaked app-level event subscription, but it does clear managed references such as `BindingContext`, `Content`, `ItemsSource`, gesture recognizers, and `Parent` when the view is done.
 
 Use the default `DisconnectHandlers` strategy when you want lower-destruction handler cleanup. Use `Compartmentalize` when you are validating propagation or trying to keep a known leak from retaining a larger managed object graph.
