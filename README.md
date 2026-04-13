@@ -108,6 +108,7 @@ V2 offers three teardown strategies:
 
 MAUI 9+ already disconnects handlers automatically in common cases, such as back navigation, and exposes `DisconnectHandlers()` for explicit cleanup. MemoryToolkit.Maui keeps `DisconnectHandlers` as the default because it gives the toolkit a low-destruction cleanup action when its lifecycle inference says a view is done. Use `Compartmentalize` when you are validating leak propagation or need fault containment.
 `Compartmentalize` clears the `VisualElement.Behaviors` collection. MemoryToolkit's own `LeakMonitorBehavior` and `TearDownBehavior` hooks use attached properties, so they are not stored in that collection.
+Managed-reference clearing is best-effort: if a control throws while one reference is being cleared, the exception is logged and teardown continues with the remaining cleanup steps.
 
 ## Temporarily Unloaded NavigationPages
 There are a few common-enough scenarios where you'll expect a `NavigationPage` to be unloaded only temporarily. For example, calling `Browser.OpenAsync(..)`. In these cases, you can temporarily set the 'Suppress' properties on the `NavigationPage` itself, which will cause all behaviors within the page to be ignored. Here's an example handler method:

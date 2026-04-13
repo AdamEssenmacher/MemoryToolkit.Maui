@@ -104,6 +104,24 @@ public sealed class TearDownStrategyTests
     }
 
     [Fact]
+    public void CompartmentalizeContinuesWhenManagedReferenceClearingThrows()
+    {
+        var handler = new TestElementHandler();
+        var contentView = new ThrowingContentView
+        {
+            Content = new Label(),
+            Handler = handler,
+            ThrowWhenClearingContent = true
+        };
+
+        Exception? exception = Record.Exception(() => contentView.TearDown(TearDownStrategy.Compartmentalize));
+
+        Assert.Null(exception);
+        Assert.Equal(1, handler.DisconnectCalls);
+        Assert.NotNull(contentView.Content);
+    }
+
+    [Fact]
     public void DisconnectHandlersHonorsManualDisconnectPolicy()
     {
         var label = new Label();
@@ -154,6 +172,19 @@ public sealed class TearDownStrategyTests
 
     private sealed class TestBehavior : Behavior<Label>
     {
+    }
+
+    private sealed class ThrowingContentView : ContentView
+    {
+        public bool ThrowWhenClearingContent { get; init; }
+
+        protected override void OnPropertyChanging(string? propertyName = null)
+        {
+            if (ThrowWhenClearingContent && propertyName == nameof(Content) && Content is not null)
+                throw new NullReferenceException("Simulated content clear failure.");
+
+            base.OnPropertyChanging(propertyName);
+        }
     }
 
     private sealed class TestElementHandler : IViewHandler

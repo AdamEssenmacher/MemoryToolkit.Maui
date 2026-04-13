@@ -109,7 +109,7 @@ public static class Utilities
                     DisconnectHandlerSafely(visualElement);
                 }
 
-                visualElement.Resources = null;
+                ClearMauiReference(current, "resources", () => visualElement.Resources = null);
             }
             else if (current is Element element)
             {
@@ -171,41 +171,57 @@ public static class Utilities
     private static void ClearMauiReferences(IVisualTreeElement vte)
     {
         if (vte is VisualElement visualElement)
-            visualElement.Behaviors.Clear();
+            ClearMauiReference(vte, "behaviors", () => visualElement.Behaviors.Clear());
 
         if (vte is Element element)
         {
-            element.BindingContext = null;
-            element.Parent = null;
-            element.ClearLogicalChildren();
+            ClearMauiReference(vte, "binding context", () => element.BindingContext = null);
+            ClearMauiReference(vte, "parent", () => element.Parent = null);
+            ClearMauiReference(vte, "logical children", element.ClearLogicalChildren);
         }
 
         if (vte is View view)
-            view.GestureRecognizers.Clear();
+            ClearMauiReference(vte, "gesture recognizers", () => view.GestureRecognizers.Clear());
 
         if (vte is Label label)
-            ClearFormattedTextReferences(label);
+            ClearMauiReference(vte, "formatted text", () => ClearFormattedTextReferences(label));
 
         if (vte is ItemsView itemsView)
         {
-            itemsView.ItemsSource = null;
-            itemsView.ItemTemplate = null;
+            ClearMauiReference(vte, "item source", () => itemsView.ItemsSource = null);
+            ClearMauiReference(vte, "item template", () => itemsView.ItemTemplate = null);
         }
 #pragma warning disable CS0618
         else if (vte is ListView listView)
         {
-            listView.ItemsSource = null;
-            listView.ItemTemplate = null;
+            ClearMauiReference(vte, "item source", () => listView.ItemsSource = null);
+            ClearMauiReference(vte, "item template", () => listView.ItemTemplate = null);
         }
 #pragma warning restore CS0618
         else if (vte is ContentView contentView)
-            contentView.Content = null;
+            ClearMauiReference(vte, "content", () => contentView.Content = null);
         else if (vte is Border border)
-            border.Content = null;
+            ClearMauiReference(vte, "content", () => border.Content = null);
         else if (vte is ContentPage contentPage)
-            contentPage.Content = null;
+            ClearMauiReference(vte, "content", () => contentPage.Content = null);
         else if (vte is ScrollView scrollView)
-            scrollView.Content = null;
+            ClearMauiReference(vte, "content", () => scrollView.Content = null);
+    }
+
+    private static void ClearMauiReference(IVisualTreeElement vte, string referenceName, Action clearReference)
+    {
+        try
+        {
+            clearReference();
+        }
+        catch (Exception exception)
+        {
+            GarbageCollectionMonitor.Instance.Logger.LogWarning(
+                exception,
+                "Exception while clearing {ReferenceName} for {ElementType}",
+                referenceName,
+                vte.GetType().FullName);
+        }
     }
 
     private static void ClearFormattedTextReferences(Label label)
