@@ -27,30 +27,32 @@ public class GarbageCollectionMonitor : IGarbageCollectionMonitor
 
     public Action<CollectionTarget>? OnCollected { get; set; }
 
+    public int MaxCollections { get; set; } = 10;
+
+    public int MillisecondsBetweenCollections { get; set; } = 200;
+
     public async Task MonitorAndForceCollectionAsync(List<CollectionTarget> collectionItems)
     {
-        const int maxCollections = 10;
-        const int msBetweenCollections = 200;
         var currentCollection = 0;
 
-        while (++currentCollection <= maxCollections)
+        while (++currentCollection <= MaxCollections)
         {
             GC.Collect();
             GC.WaitForPendingFinalizers();
 
             foreach (CollectionTarget item in collectionItems.ToArray())
             {
-                if (item.Reference.IsAlive && currentCollection < maxCollections)
+                if (item.Reference.IsAlive && currentCollection < MaxCollections)
                     continue;
 
                 collectionItems.Remove(item);
 
                 if (!item.Reference.IsAlive)
                     OnCollectedInternal(item);
-                else if (currentCollection == maxCollections) OnLeakedInternal(item);
+                else if (currentCollection == MaxCollections) OnLeakedInternal(item);
             }
 
-            await Task.Delay(msBetweenCollections);
+            await Task.Delay(MillisecondsBetweenCollections);
         }
     }
 

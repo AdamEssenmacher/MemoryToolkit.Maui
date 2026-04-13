@@ -8,7 +8,8 @@
              Padding="10"
              Title="Shell Sample"
              mtk:LeakMonitorBehavior.Cascade="True"
-             mtk:TearDownBehavior.Cascade="False">
+             mtk:TearDownBehavior.Cascade="False"
+             mtk:TearDownBehavior.Strategy="DisconnectHandlers">
 
     <Grid RowDefinitions="Auto,*,1,Auto,20,Auto">
         <VerticalStackLayout>

@@ -2,6 +2,8 @@
 
 MAUI leaks like a toddler's sippy cup. It's messy, gross, and feels hopelessly unavoidable.
 
+MemoryToolkit.Maui V2 is a .NET 10 rebaseline of the original toolkit. MAUI 9/10 introduced automatic handler disconnection and a `DisconnectHandlers()` API, so V2 defaults to a less destructive teardown path while keeping the original leak detection and containment tools available for apps that need them.
+
 MemoryToolkit.Maui offers three primary features to help manage this problem:
 
 - **Detects leaks** in MAUI views as they happen.
@@ -16,7 +18,7 @@ If this project saves you time, money, or sanity, please consider [sponsoring me
 ```nuget install AdamE.MemoryToolkit.Maui```
 
 ## Configure leak detection
-Update `MauiProgram.cs`. Note, this is only required for leak detection. `TearDownBehavior` does not require configuration.
+Update `MauiProgram.cs`. Note, this is only required for leak detection and global V2 defaults. `TearDownBehavior` does not require configuration.
 ```c#
 public static MauiApp CreateMauiApp()
 {
@@ -29,12 +31,14 @@ public static MauiApp CreateMauiApp()
     // Configure logging
     builder.Logging.AddDebug();
     
-    // Ensure UseLeakDetection is called after logging has been configured!
-    builder.UseLeakDetection(collectionTarget =>
+    // Ensure UseMemoryToolkit is called after logging has been configured!
+    builder.UseMemoryToolkit(options =>
     {
-        // This callback will run any time a leak is detected.
-        Application.Current?.MainPage?.DisplayAlert("💦Leak Detected💦",
-            $"❗🧟❗{collectionTarget.Name} is a zombie!", "OK");
+        options.DefaultTearDownStrategy = TearDownStrategy.DisconnectHandlers;
+        options.OnLeaked = collectionTarget =>
+        {
+            // This callback will run any time a leak is detected.
+        };
     });
 #endif
 
@@ -75,7 +79,8 @@ Once leaks have been detected, you can make sure they are automatically compartm
              xmlns:mtk="clr-namespace:MemoryToolkit.Maui;assembly=MemoryToolkit.Maui"
              x:Class="ShellSample.MainPage"
              mtk:LeakMonitorBehavior.Cascade="True"
-             mtk:TearDownBehavior.Cascade="True">
+             mtk:TearDownBehavior.Cascade="True"
+             mtk:TearDownBehavior.Strategy="DisconnectHandlers">
     <!-- All child views are now automatically torn down. -->
 </ContentPage>
 ```
@@ -93,6 +98,16 @@ Both `LeakMonitorBehavior` and `TearDownBehavior` offer an attached property `Su
 
 ## Custom Teardown Hook
 In some cases, known leaks may be worked around by whacking the control into a safe state when we're done with it. For example, an `SKLottieView` from SkiaSharp once leaked as long as its `IsAnimationEnabled` property was set to True. The `TearDownBehavior` class offers a static `Action<object>` property `OnTearDown` that is invoked immediately before each call to `DisconnectHandler()`. You may use this hook to examine the view and change its state (for example, to set an `SKLottieView`'s `IsAnimationEnabled` property to 'false').
+
+## Teardown Strategies
+V2 offers four teardown strategies:
+
+- `DetectOnly`: do not tear down; useful for leak monitoring-only runs.
+- `DisconnectHandlers`: call MAUI's built-in handler disconnection path. This is the V2 default.
+- `Compartmentalize`: clear binding contexts, parent/content references, logical children, and resources before disconnecting handlers.
+- `AggressiveLegacy`: preserve V1-style aggressive cleanup, including handler `Dispose()` calls and the old iOS `ViewCell` platform-view disposal workaround.
+
+Prefer `DisconnectHandlers` first on MAUI 10. Use `Compartmentalize` when you are validating leak propagation or need fault containment, and reserve `AggressiveLegacy` for known old leaks that still reproduce.
 
 ## Temporarily Unloaded NavigationPages
 There are a few common-enough scenarios where you'll expect a `NavigationPage` to be unloaded only temporarily. For example, calling `Browser.OpenAsync(..)`. In these cases, you can temporarily set the 'Suppress' properties on the `NavigationPage` itself, which will cause all behaviors within the page to be ignored. Here's an example handler method:
@@ -145,8 +160,7 @@ While quite effective, `TearDownBehavior.Cascade` is an extremely destructive to
 The behavior next does its best to remove any references each view has to other views. It does this by setting certain properties to null (such as `ItemsSource`, `Content`, and `Parent`) and calling `ClearLogicalChildren()`. If this step fails to remove references to other objects, the leak will spread. I expect that this process will improve as MemoryToolkit.Maui matures.
 
 ### Phase 3) Handler Cleanup
-After giving the platform handlers their chance to react to a now-empty and isolated view, `TearDownBehavior` calls `Dispose()` (if applicable) and then `DisconnectHandler()` on the view's Handler. Other targeted cleanup measures are also applied to address known leaks in MAUI.
-
+V2 defaults to MAUI's built-in `DisconnectHandlers()` behavior. `Compartmentalize` still clears the surrounding MAUI object graph before disconnecting handlers, while `AggressiveLegacy` keeps the old `Dispose()`-heavy cleanup available for targeted compatibility tests.
 
 # Sample App
 A sample MAUI project is included that demonstrates the severity of the issue, along with the toolkit's ability to detect and eliminate it. **The demonstration is meant to be run on iOS.**

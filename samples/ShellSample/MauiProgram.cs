@@ -19,12 +19,19 @@ public static class MauiProgram
 #if DEBUG
         builder.Logging.AddDebug();
         
-        builder.UseLeakDetection(collectionTarget =>
+        builder.UseMemoryToolkit(options =>
         {
-            Application.Current?.MainPage?.DisplayAlert("💦Leak Detected💦",
-                $"❗🧟❗{collectionTarget.Name} is a zombie!", "OK");
+            options.OnLeaked = collectionTarget =>
+            {
+                Page? currentPage = Application.Current?.Windows.FirstOrDefault()?.Page;
+                if (currentPage != null)
+                    _ = currentPage.DisplayAlertAsync("Leak Detected",
+                        $"{collectionTarget.Name} is a zombie.", "OK");
 
-            ((App)Application.Current!).LeaksDetected++;
+                ((App)Application.Current!).LeaksDetected++;
+            };
+
+            options.DefaultTearDownStrategy = TearDownStrategy.DisconnectHandlers;
         });
 #endif
 

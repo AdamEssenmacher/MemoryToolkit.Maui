@@ -1,3 +1,5 @@
+using Microsoft.Maui;
+
 namespace MemoryToolkit.Maui;
 
 public static class Utilities
@@ -63,13 +65,21 @@ public static class Utilities
 
     public static void TearDown(this IVisualTreeElement vte)
     {
-        TearDownImpl(vte, true);
+        vte.TearDown(MemoryToolkitConfiguration.Options.DefaultTearDownStrategy);
+    }
+
+    public static void TearDown(this IVisualTreeElement vte, TearDownStrategy strategy)
+    {
+        if (strategy == TearDownStrategy.DetectOnly)
+            return;
+
+        TearDownImpl(vte, true, strategy);
 
         return;
 
-        void TearDownImpl(IVisualTreeElement vte, bool isRoot)
+        void TearDownImpl(IVisualTreeElement current, bool isRoot, TearDownStrategy strategy)
         {
-            if (vte is not BindableObject bindableObject)
+            if (current is not BindableObject bindableObject)
                 return;
 
             // Suppress is self-explanatory. Cascade means it's already set for tear down, so no reason to double up.
@@ -77,67 +87,80 @@ public static class Utilities
                 (!isRoot && TearDownBehavior.GetCascade(bindableObject)))
                 return;
 
-            foreach (IVisualTreeElement childElement in vte.GetVisualChildren())
-                TearDownImpl(childElement, false);
-
-            if (vte is VisualElement visualElement)
+            if (strategy == TearDownStrategy.DisconnectHandlers)
             {
-                // First, clear the BindingContext
-                visualElement.BindingContext = null;
-                
-                // Next, isolate the element.
-                visualElement.Parent = null;
+                if (current is IView view)
+                    view.DisconnectHandlers();
 
-                if (vte is ListView listView)
-                    listView.ItemsSource = null;
-                else if (vte is ContentView contentView)
-                    contentView.Content = null;
-                else if (vte is Border border)
-                    border.Content = null;
-                else if (vte is ContentPage contentPage)
-                    contentPage.Content = null;
-                else if (vte is ScrollView scrollView)
-                    scrollView.Content = null;
+                return;
+            }
 
-                visualElement.ClearLogicalChildren();
+            foreach (IVisualTreeElement childElement in current.GetVisualChildren())
+                TearDownImpl(childElement, false, strategy);
 
-                // With the binding context cleared, and the element isolated, it has a chance to revert itself
-                // to a 'default' state.
+            ClearMauiReferences(current);
 
-                // The _last_ thing we want to do is disconnect the handler.
+            if (current is VisualElement visualElement)
+            {
                 if (visualElement.Handler != null)
                 {
                     TearDownBehavior.OnTearDown?.Invoke(visualElement);
-                    if (visualElement.Handler is IDisposable disposableHandler)
+
+                    if (strategy == TearDownStrategy.AggressiveLegacy &&
+                        visualElement.Handler is IDisposable disposableHandler)
                         disposableHandler.Dispose();
-                    visualElement.Handler?.DisconnectHandler();
+
+                    visualElement.Handler.DisconnectHandler();
                 }
 
                 visualElement.Resources = null;
             }
-            else if (vte is Element element)
+            else if (current is Element element)
             {
-                element.BindingContext = null;
-                
-                element.Parent = null;
-
-                element.ClearLogicalChildren();
-
                 if (element.Handler != null)
                 {
                     TearDownBehavior.OnTearDown?.Invoke(element);
 
 #if IOS
+#pragma warning disable CS0618
                     // Fixes issue specific to ListView on iOS, where RealCell is not nulled out.
-                    if (element is ViewCell && element.Handler.PlatformView is IDisposable disposablePlatformView)
+                    if (strategy == TearDownStrategy.AggressiveLegacy &&
+                        element is ViewCell &&
+                        element.Handler.PlatformView is IDisposable disposablePlatformView)
                         disposablePlatformView.Dispose();
+#pragma warning restore CS0618
 #endif
 
-                    if (element.Handler is IDisposable disposableElementHandler)
+                    if (strategy == TearDownStrategy.AggressiveLegacy &&
+                        element.Handler is IDisposable disposableElementHandler)
                         disposableElementHandler.Dispose();
+
                     element.Handler.DisconnectHandler();
                 }
             }
         }
+    }
+
+    private static void ClearMauiReferences(IVisualTreeElement vte)
+    {
+        if (vte is Element element)
+        {
+            element.BindingContext = null;
+            element.Parent = null;
+            element.ClearLogicalChildren();
+        }
+
+#pragma warning disable CS0618
+        if (vte is ListView listView)
+            listView.ItemsSource = null;
+#pragma warning restore CS0618
+        else if (vte is ContentView contentView)
+            contentView.Content = null;
+        else if (vte is Border border)
+            border.Content = null;
+        else if (vte is ContentPage contentPage)
+            contentPage.Content = null;
+        else if (vte is ScrollView scrollView)
+            scrollView.Content = null;
     }
 }
