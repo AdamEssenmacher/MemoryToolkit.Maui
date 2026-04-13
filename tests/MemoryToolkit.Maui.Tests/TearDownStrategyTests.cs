@@ -20,6 +20,8 @@ public sealed class TearDownStrategyTests
     {
         (ContentPage page, Grid root, Label label, object bindingContext) = CreatePageGraph();
         var gestureRecognizer = new TapGestureRecognizer();
+        (FormattedString formattedText, Span span, TapGestureRecognizer spanGestureRecognizer) =
+            AddFormattedTextWithGesture(label);
         label.GestureRecognizers.Add(gestureRecognizer);
 
         page.TearDown(TearDownStrategy.DisconnectHandlers);
@@ -29,12 +31,16 @@ public sealed class TearDownStrategyTests
         Assert.Same(bindingContext, root.BindingContext);
         Assert.Same(bindingContext, label.BindingContext);
         Assert.Same(gestureRecognizer, Assert.Single(label.GestureRecognizers));
+        Assert.Same(formattedText, label.FormattedText);
+        Assert.Contains(span, label.FormattedText.Spans);
+        Assert.Same(spanGestureRecognizer, Assert.Single(span.GestureRecognizers));
     }
 
     [Fact]
     public void CompartmentalizeClearsManagedReferences()
     {
         (ContentPage page, Grid root, Label label, _) = CreatePageGraph();
+        (FormattedString formattedText, Span span, _) = AddFormattedTextWithGesture(label);
         label.GestureRecognizers.Add(new TapGestureRecognizer());
 
         page.TearDown(TearDownStrategy.Compartmentalize);
@@ -46,6 +52,9 @@ public sealed class TearDownStrategyTests
         Assert.Null(root.Parent);
         Assert.Null(label.Parent);
         Assert.Empty(label.GestureRecognizers);
+        Assert.Null(label.FormattedText);
+        Assert.Empty(formattedText.Spans);
+        Assert.Empty(span.GestureRecognizers);
     }
 
     [Theory]
@@ -103,6 +112,21 @@ public sealed class TearDownStrategyTests
         label.BindingContext = bindingContext;
 
         return (page, root, label, bindingContext);
+    }
+
+    private static (FormattedString FormattedText, Span Span, TapGestureRecognizer GestureRecognizer)
+        AddFormattedTextWithGesture(Label label)
+    {
+        var gestureRecognizer = new TapGestureRecognizer();
+        var span = new Span { Text = "Link" };
+        span.GestureRecognizers.Add(gestureRecognizer);
+
+        var formattedText = new FormattedString();
+        formattedText.Spans.Add(new Span { Text = "Text " });
+        formattedText.Spans.Add(span);
+        label.FormattedText = formattedText;
+
+        return (formattedText, span, gestureRecognizer);
     }
 
     private sealed class TestElementHandler : IViewHandler

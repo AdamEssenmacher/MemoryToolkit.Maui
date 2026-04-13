@@ -180,6 +180,9 @@ public static class Utilities
         if (vte is View view)
             view.GestureRecognizers.Clear();
 
+        if (vte is Label label)
+            ClearFormattedTextReferences(label);
+
 #pragma warning disable CS0618
         if (vte is ListView listView)
             listView.ItemsSource = null;
@@ -192,5 +195,17 @@ public static class Utilities
             contentPage.Content = null;
         else if (vte is ScrollView scrollView)
             scrollView.Content = null;
+    }
+
+    private static void ClearFormattedTextReferences(Label label)
+    {
+        if (label.FormattedText is not { } formattedText)
+            return;
+
+        foreach (Span span in formattedText.Spans)
+            span.GestureRecognizers.Clear();
+
+        formattedText.Spans.Clear();
+        label.FormattedText = null;
     }
 }
