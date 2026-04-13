@@ -33,7 +33,7 @@ public sealed class ElementLifecycleTrackerTests
     }
 
     [Fact]
-    public async Task RunWhenDoneRunsForNonNavigationPageAfterShellFallbackDelay()
+    public async Task RunWhenDoneRunsForNonNavigationPageAfterFallbackDelay()
     {
         var element = new Label();
         var page = new ContentPage

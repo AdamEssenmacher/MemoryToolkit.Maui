@@ -141,15 +141,18 @@ Individual controls (e.g. `ListView`, `Border`, `Entry`, etc.) may be implemente
 
 ## Defining 'done with'
 
-Lacking an officially supported view lifecycle management mechanism, MemoryToolkit.Maui makes some guesses on when developers are usually 'done with' a view. This condition is considered met when any of the following are true:
+MemoryToolkit.Maui's automatic behaviors are best-effort lifecycle inference. They run after a view unloads and make conservative guesses about when developers are usually 'done with' a view.
 
-- The `Element`'s `Page` (or itself, if the `Element` is a `Page`) was just popped off the navigation stack.
-- The `Element` has been unloaded and is not (or no longer) hosted within a `Page` (e.g. a `ControlTemplate` that was just swapped out).
-- The `Element` is hosted within a `NavigationPage` that has been unloaded (this can be temporarily ignored; see the 'Advanced Use' section below).
+V2 currently treats a view as done in these cases:
+
+- The view's host `Page` was popped from an active `NavigationPage`.
+- The view has unloaded and is no longer hosted within a `Page` (e.g. a `ControlTemplate` was swapped out).
+- The view is hosted within a `NavigationPage` that has itself unloaded and has not been suppressed.
+- The view is not hosted within a `NavigationPage`, remains unloaded after a short delay, and is not still hosted inside a Shell `Tab`.
 
 Out of the box, MemoryToolkit.Maui uses this definition to automatically apply leak monitoring and low-destruction handler disconnection. Compartmentalization is opt-in.
 
-This definition is likely incomplete (we probably need to consider things like nested modal navigation and tabbed pages), but I think it's a good starting point. In cases where this definition doesn't apply (e.g. cached pages), MemoryToolkit.Maui still offers tools so developers can take direct control over monitoring and managing component lifecycles.
+This is not comprehensive Shell, flyout, tab, or modal navigation tracking. It also cannot detect subviews that were dynamically removed before unload, and it should not be used as the only lifecycle signal for intentionally cached pages. In cases where this definition doesn't apply, MemoryToolkit.Maui still offers tools so developers can take direct control with `Monitor()` and `TearDown()`.
 
 ## How does TearDownBehavior work?
 `TearDownBehavior.Cascade` runs when MemoryToolkit.Maui believes a view is done. The default strategy is intentionally low-destruction, but `Compartmentalize` is much more invasive and should only be used when you understand what it clears.
