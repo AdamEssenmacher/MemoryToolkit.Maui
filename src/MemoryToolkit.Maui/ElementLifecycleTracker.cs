@@ -31,9 +31,26 @@ internal static class ElementLifecycleTracker
 
         await Task.Delay(100);
 
+        if (IsHostPageStillInNavigationStack(hostPage) ||
+            IsHostPageStillHostedByShell(hostPage))
+            return;
+
         var tab = Utilities.GetFirstSelfOrParentOfType<Tab>(hostPage);
         if (tab is null)
             action.OnDone(visualElement);
+    }
+
+    private static bool IsHostPageStillInNavigationStack(Page hostPage)
+    {
+        INavigation navigation = hostPage.Navigation;
+
+        return navigation.NavigationStack.Contains(hostPage) ||
+               navigation.ModalStack.Contains(hostPage);
+    }
+
+    private static bool IsHostPageStillHostedByShell(Page hostPage)
+    {
+        return Utilities.GetFirstSelfOrParentOfType<Shell>(hostPage) is not null;
     }
 
     private static void TrackNavigationScope(

@@ -148,7 +148,7 @@ V2 currently treats a view as done in these cases:
 - The view's host `Page` was popped from an active `NavigationPage`.
 - The view has unloaded and is no longer hosted within a `Page` (e.g. a `ControlTemplate` was swapped out).
 - The view is hosted within a `NavigationPage` that has itself unloaded and has not been suppressed.
-- The view is not hosted within a `NavigationPage`, remains unloaded after a short delay, and is not still hosted inside a Shell `Tab`.
+- The view is not hosted within a `NavigationPage`, remains unloaded after a short delay, is no longer in a navigation/modal stack, and is not still hosted by Shell.
 
 Out of the box, MemoryToolkit.Maui uses this definition to automatically apply leak monitoring and low-destruction handler disconnection. Compartmentalization is opt-in.
 
