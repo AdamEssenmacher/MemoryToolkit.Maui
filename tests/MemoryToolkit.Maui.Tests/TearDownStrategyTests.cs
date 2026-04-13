@@ -104,6 +104,77 @@ public sealed class TearDownStrategyTests
     }
 
     [Fact]
+    public void TearDownContinuesWhenAHandlerDisconnectThrowsObjectDisposedException()
+    {
+        var throwingLabel = new Label();
+        var healthyLabel = new Label();
+        var throwingHandler = new TestElementHandler
+        {
+            ThrowOnDisconnect = true,
+            DisconnectException = new ObjectDisposedException("Disposed handler")
+        };
+        var healthyHandler = new TestElementHandler();
+        throwingLabel.Handler = throwingHandler;
+        healthyLabel.Handler = healthyHandler;
+
+        var root = new Grid();
+        root.Add(throwingLabel);
+        root.Add(healthyLabel);
+
+        Exception? exception = Record.Exception(() => root.TearDown(TearDownStrategy.DisconnectHandlers));
+
+        Assert.Null(exception);
+        Assert.Equal(1, throwingHandler.DisconnectCalls);
+        Assert.Equal(1, healthyHandler.DisconnectCalls);
+    }
+
+    [Theory]
+    [InlineData(TearDownStrategy.DetectOnly)]
+    [InlineData(TearDownStrategy.DisconnectHandlers)]
+    public void NonCompartmentalizeStrategiesDoNotInvokeTearDownHook(TearDownStrategy strategy)
+    {
+        var label = new Label
+        {
+            Handler = new TestElementHandler()
+        };
+        var tearDownTargets = new List<object>();
+        TearDownBehavior.OnTearDown = tearDownTargets.Add;
+
+        try
+        {
+            label.TearDown(strategy);
+        }
+        finally
+        {
+            TearDownBehavior.OnTearDown = null;
+        }
+
+        Assert.Empty(tearDownTargets);
+    }
+
+    [Fact]
+    public void CompartmentalizeInvokesTearDownHookForHandledElements()
+    {
+        var label = new Label();
+        var handler = new TestElementHandler();
+        label.Handler = handler;
+        var tearDownTargets = new List<object>();
+        TearDownBehavior.OnTearDown = tearDownTargets.Add;
+
+        try
+        {
+            label.TearDown(TearDownStrategy.Compartmentalize);
+        }
+        finally
+        {
+            TearDownBehavior.OnTearDown = null;
+        }
+
+        Assert.Same(label, Assert.Single(tearDownTargets));
+        Assert.Equal(1, handler.DisconnectCalls);
+    }
+
+    [Fact]
     public void CompartmentalizeContinuesWhenManagedReferenceClearingThrows()
     {
         var handler = new TestElementHandler();
@@ -191,6 +262,8 @@ public sealed class TearDownStrategyTests
     {
         public bool ThrowOnDisconnect { get; init; }
 
+        public Exception? DisconnectException { get; init; }
+
         public int DisconnectCalls { get; private set; }
 
         public object? PlatformView => null;
@@ -237,7 +310,7 @@ public sealed class TearDownStrategyTests
             DisconnectCalls++;
 
             if (ThrowOnDisconnect)
-                throw new InvalidOperationException("Test disconnect failure.");
+                throw DisconnectException ?? new InvalidOperationException("Test disconnect failure.");
         }
     }
 }

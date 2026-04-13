@@ -114,6 +114,48 @@ public sealed class ElementLifecycleTrackerTests
     }
 
     [Fact]
+    public async Task RunWhenDoneDoesNotRunWhenHostPageRemainsInFlyoutItem()
+    {
+        var element = new Label();
+        var page = new ContentPage
+        {
+            Content = element
+        };
+        var shell = new Shell
+        {
+            Items =
+            {
+                new FlyoutItem
+                {
+                    Items =
+                    {
+                        new Tab
+                        {
+                            Items =
+                            {
+                                new ShellContent
+                                {
+                                    Content = page
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        var wasCalled = false;
+        var action = new LifecycleAction(
+            "test",
+            _ => false,
+            _ => wasCalled = true);
+
+        await ElementLifecycleTracker.RunWhenDoneAsync(element, action);
+
+        GC.KeepAlive(shell);
+        Assert.False(wasCalled);
+    }
+
+    [Fact]
     public async Task RunWhenDoneDoesNotRunForNavigationPageContainerWithModalStack()
     {
         var rootPage = new ContentPage();
