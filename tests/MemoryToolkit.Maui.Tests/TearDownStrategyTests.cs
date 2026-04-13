@@ -20,8 +20,10 @@ public sealed class TearDownStrategyTests
     {
         (ContentPage page, Grid root, Label label, object bindingContext) = CreatePageGraph();
         var gestureRecognizer = new TapGestureRecognizer();
+        var behavior = new TestBehavior();
         (FormattedString formattedText, Span span, TapGestureRecognizer spanGestureRecognizer) =
             AddFormattedTextWithGesture(label);
+        label.Behaviors.Add(behavior);
         label.GestureRecognizers.Add(gestureRecognizer);
 
         page.TearDown(TearDownStrategy.DisconnectHandlers);
@@ -30,6 +32,7 @@ public sealed class TearDownStrategyTests
         Assert.Same(bindingContext, page.BindingContext);
         Assert.Same(bindingContext, root.BindingContext);
         Assert.Same(bindingContext, label.BindingContext);
+        Assert.Same(behavior, Assert.Single(label.Behaviors));
         Assert.Same(gestureRecognizer, Assert.Single(label.GestureRecognizers));
         Assert.Same(formattedText, label.FormattedText);
         Assert.Contains(span, label.FormattedText.Spans);
@@ -41,6 +44,7 @@ public sealed class TearDownStrategyTests
     {
         (ContentPage page, Grid root, Label label, _) = CreatePageGraph();
         (FormattedString formattedText, Span span, _) = AddFormattedTextWithGesture(label);
+        label.Behaviors.Add(new TestBehavior());
         label.GestureRecognizers.Add(new TapGestureRecognizer());
 
         page.TearDown(TearDownStrategy.Compartmentalize);
@@ -51,6 +55,7 @@ public sealed class TearDownStrategyTests
         Assert.Null(label.BindingContext);
         Assert.Null(root.Parent);
         Assert.Null(label.Parent);
+        Assert.Empty(label.Behaviors);
         Assert.Empty(label.GestureRecognizers);
         Assert.Null(label.FormattedText);
         Assert.Empty(formattedText.Spans);
@@ -127,6 +132,10 @@ public sealed class TearDownStrategyTests
         label.FormattedText = formattedText;
 
         return (formattedText, span, gestureRecognizer);
+    }
+
+    private sealed class TestBehavior : Behavior<Label>
+    {
     }
 
     private sealed class TestElementHandler : IViewHandler

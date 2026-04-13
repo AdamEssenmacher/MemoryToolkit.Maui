@@ -170,6 +170,9 @@ public static class Utilities
 
     private static void ClearMauiReferences(IVisualTreeElement vte)
     {
+        if (vte is VisualElement visualElement)
+            visualElement.Behaviors.Clear();
+
         if (vte is Element element)
         {
             element.BindingContext = null;

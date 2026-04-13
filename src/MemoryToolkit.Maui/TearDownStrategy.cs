@@ -16,7 +16,7 @@ public enum TearDownStrategy
     DisconnectHandlers,
 
     /// <summary>
-    /// Clear managed references such as binding contexts, content references, item sources, gesture recognizers, formatted text spans, logical children, and resources before disconnecting handlers.
+    /// Clear managed references such as binding contexts, MAUI behaviors, content references, item sources, gesture recognizers, formatted text spans, logical children, and resources before disconnecting handlers.
     /// </summary>
     Compartmentalize
 }
